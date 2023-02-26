@@ -19,16 +19,10 @@ class Felt:
         return Felt((self.val - felt.val) % self.prime, self.prime)
 
     def inv(self):
-        if self.prime + 1 & self.prime == 0:
-            if self.val == 0:
-                return Felt(0, self.prime)
-            return self ** (self.prime - 2)
-        else:
-            if self.val == 0:
-                return Felt(0, self.prime)
-            for i in range(self.prime):
-                if self * Felt(i, self.prime) == Felt(1, self.prime):
-                    return Felt(i, self.prime)
+        # TODO: Extended Euclidean Algorithm
+        if self.val == 0:
+            return Felt(0, self.prime)
+        return self ** (self.prime - 2)
 
     def __mul__(self, felt):
         assert self.prime == felt.prime
