@@ -1,6 +1,6 @@
 from math import log2
 from felt import Felt
-from sumcheck import SumcheckProtocol, SuperEfficientProver, SuperEfficientVerifier
+from sumcheck import SumcheckProtocol, SumcheckProver, SumcheckVerifier
 from mle import MultiLinearExtension as MLE
 from lagrange import eval_from_points
 from hypercube import Hypercube
@@ -46,8 +46,8 @@ class GKR:
         )
 
         sc = SumcheckProtocol(
-            verifier=SuperEfficientVerifier(2, lambda x: g.eval(x)),
-            prover=SuperEfficientProver(g.evals, m, 2),
+            verifier=SumcheckVerifier(2, lambda x: g.eval(x)),
+            prover=SumcheckProver(g.evals, m, 2),
             variables=int(log2(len(g.evals))),
         )
         r = sc.execute()

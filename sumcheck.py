@@ -3,29 +3,8 @@ from felt import Felt
 from lagrange import eval_from_points
 
 
-class SumcheckProver(ABC):
-    def starting_round(self) -> tuple[Felt, list[Felt]]:
-        pass
-
-    def execute_round(self, r: Felt) -> list[Felt]:
-        pass
-
-
-class SumcheckVerifier(ABC):
-    def starting_round(self):
-        pass
-
-    def execute_round(self):
-        pass
-
-    def final_round(self):
-        pass
-
-
 class SumcheckProtocol:
-    def __init__(
-        self, prover: SumcheckProver, verifier: SumcheckVerifier, variables: int
-    ):
+    def __init__(self, prover, verifier, variables):
         self.prover = prover
         self.verifier = verifier
         self.variables = variables
@@ -51,7 +30,7 @@ class SumcheckProtocol:
         return self.verifier.rs
 
 
-class SuperEfficientProver(SumcheckProver):
+class SumcheckProver:
     def __init__(self, evals, c, degree):
         self.evals = evals
         self.c = c
@@ -82,7 +61,7 @@ class SuperEfficientProver(SumcheckProver):
         return self.poly_evals()
 
 
-class SuperEfficientVerifier(SumcheckVerifier):
+class SumcheckVerifier:
     def __init__(self, degree, oracle):
         self.degree = degree
         self.oracle = oracle

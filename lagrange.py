@@ -37,10 +37,10 @@ class Terms:
 
 
 def eval_from_points(evals, r):
-    poly = Terms([], Felt)
+    poly = Terms([])
     for k in range(1, len(evals)):
-        poly *= Terms({(Felt(1), Felt(-k), False), (Felt(0), Felt(-k), True)}, Felt)
-    sum = poly.eval(r, Felt) * evals[0]
+        poly *= Terms({(Felt(1), Felt(-k), False), (Felt(0), Felt(-k), True)})
+    sum = poly.eval(r) * evals[0]
     for i in range(1, len(evals)):
         poly *= Terms(
             {
@@ -48,8 +48,7 @@ def eval_from_points(evals, r):
                 (Felt(1), Felt(-i), True),
                 (Felt(0), Felt(i), True),
                 (Felt(0), Felt(0) - Felt(len(evals) - i), False),
-            },
-            Felt,
+            }
         )
-        sum += poly.eval(r, Felt) * evals[i]
+        sum += poly.eval(r) * evals[i]
     return sum
