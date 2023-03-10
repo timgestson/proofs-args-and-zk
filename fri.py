@@ -4,6 +4,8 @@ from felt import GLFelt
 
 
 class Fri:
+    # TODO: Build Merkle Commitments
+
     def __init__(self, rate, queries, poly):
         self.poly = poly
         self.degree = len(poly)
@@ -22,12 +24,14 @@ class Fri:
         self.commits.append(
             dict(zip(domain, GLFelt.fft(Fri.zero_pad(poly, domain), domain)))
         )
+        print("Commit")
         for _ in range(rounds):
             r = GLFelt.random()
             self.rs.append(r)
             domain = domain[::2]
             poly = self.commit(poly, r, domain)
 
+        print("Query")
         for _ in range(self.queries):
             s = choice(self.l)
             s_ = self.s_prime[s]
@@ -38,6 +42,7 @@ class Fri:
                 assert Fri.next(s, s_, p, p_, self.rs[i]) == self.commits[i + 1][s_2]
                 s = s_2
                 s_ = self.s_prime[s]
+        print("Success!")
 
     def commit(self, poly, r, domain):
         odds = [o * r for o in poly[1::2]]
@@ -51,6 +56,3 @@ class Fri:
 
     def next(si, si_, pi, pi_, xi):
         return (xi - si) * (si_ - si).inv() * pi_ + (xi - si_) * (si - si_).inv() * pi
-
-
-# Fri(.4, 50, [GLFelt(17),GLFelt(2),GLFelt(3),GLFelt(4), GLFelt(14), GLFelt(27)]).execute()

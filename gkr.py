@@ -2,7 +2,7 @@ from math import log2
 from felt import Felt
 from sumcheck import SumcheckProtocol, SuperEfficientProver, SuperEfficientVerifier
 from mle import MultiLinearExtension as MLE
-from polynomial import eval_from_points
+from lagrange import eval_from_points
 from hypercube import Hypercube
 
 

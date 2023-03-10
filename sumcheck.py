@@ -1,6 +1,6 @@
 from abc import ABC
 from felt import Felt
-from polynomial import eval_from_points
+from lagrange import eval_from_points
 
 
 class SumcheckProver(ABC):
