@@ -1,36 +1,36 @@
 from math import log2
 from itertools import product
 from felt import Felt
-from hypercube import Hypercube
+from util import hypercube
 
 
 class MultiLinearExtension:
-    def __init__(self, evals, prime=2**61 - 1):
+    def __init__(self, evals, F=Felt):
         self.evals = evals
-        self.prime = prime
+        self.F = F
 
     @classmethod
-    def from_zeros(cls, length, prime=2**61 - 1):
-        return cls([Felt(0, prime) for _ in range(length)], prime)
+    def from_zeros(cls, length, F=Felt):
+        return cls([F(0) for _ in range(length)], F)
 
     @classmethod
-    def from_polynomial(cls, poly, prime=2**61 - 1):
-        hc = Hypercube(poly.vars, prime)
+    def from_polynomial(cls, poly, F=Felt):
+        hc = hypercube(poly.vars, F)
         evals = [poly.eval(h) for h in hc]
-        return cls(evals, prime)
+        return cls(evals, F)
 
     @classmethod
-    def from_wiring_predicate(cls, wires, length, prime=2**61 - 1):
+    def from_wiring_predicate(cls, wires, length, F=Felt):
         ones = set()
         for w in wires:
             ones.add(int("".join(str(i) for i in w), 2))
 
         return cls(
             [
-                Felt(1, prime) if i in ones else Felt(0, prime)
+                F(1) if i in ones else F(0)
                 for i in range(2**length)
             ],
-            prime,
+            F,
         )
 
     def __repr__(self) -> str:
@@ -41,29 +41,29 @@ class MultiLinearExtension:
     def __add__(self, other):
         assert len(self.evals) == len(other.evals)
         return self.__class__(
-            [x + y for x, y in zip(self.evals, other.evals)], self.prime
+            [x + y for x, y in zip(self.evals, other.evals)], self.F
         )
 
     def __mul__(self, other):
         assert len(self.evals) == len(other.evals)
         return self.__class__(
-            [x * y for x, y in zip(self.evals, other.evals)], self.prime
+            [x * y for x, y in zip(self.evals, other.evals)], self.F
         )
 
     def eval(self, point):
         def memo(r, n):
             if n == 1:
-                return [(Felt(1, self.prime) - r[0]), r[0]]
+                return [(self.F(1) - r[0]), r[0]]
             return [
                 x
                 for expr in memo(r, n - 1)
-                for x in [expr * (Felt(1, self.prime) - r[n - 1]), expr * r[n - 1]]
+                for x in [expr * (self.F(1) - r[n - 1]), expr * r[n - 1]]
             ]
 
         cache = memo(point, len(point))
-        return sum([x * y for (x, y) in zip(self.evals, cache)], Felt(0, self.prime))
+        return sum([x * y for (x, y) in zip(self.evals, cache)], self.F(0))
 
     def hypercube_eval(self):
         n = int(log2(len(self.evals)))
-        hc = Hypercube(n, self.prime)
-        return sum([self.eval(h) for h in hc], Felt(0, self.prime))
+        hc = hypercube(n, self.F)
+        return sum([self.eval(h) for h in hc], self.F(0)) 

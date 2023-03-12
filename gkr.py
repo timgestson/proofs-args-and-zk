@@ -3,7 +3,7 @@ from felt import Felt
 from sumcheck import SumcheckProtocol, SumcheckProver, SumcheckVerifier
 from mle import MultiLinearExtension as MLE
 from lagrange import eval_from_points
-from hypercube import Hypercube
+from util import hypercube
 
 
 class GKR:
@@ -41,7 +41,7 @@ class GKR:
             [
                 add.eval(r + hc) * (w.eval(hc[:half]) + w.eval(hc[half:]))
                 + mult.eval(r + hc) * (w.eval(hc[:half]) * w.eval(hc[half:]))
-                for hc in Hypercube(width)
+                for hc in hypercube(width)
             ]
         )
 

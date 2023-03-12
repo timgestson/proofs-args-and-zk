@@ -36,7 +36,7 @@ class SumcheckProver:
         self.c = c
         self.degree = degree
 
-    def poly_evals(self) -> list[Felt]:
+    def poly_evals(self):
         half = len(self.evals) // 2
         return [
             sum(
