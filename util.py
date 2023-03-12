@@ -9,3 +9,7 @@ def hash_felt_list(lst):
 
 def flatten(matrix):
     return [item for row in matrix for item in row]
+
+
+def zero_pad(poly, length, F=Felt):
+    return poly + [F(0) for _ in range(length - len(poly))]
