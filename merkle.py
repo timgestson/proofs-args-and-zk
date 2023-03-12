@@ -15,7 +15,7 @@ class Merkle:
         return [Merkle.hash_felt(felt) for felt in felts]
 
     def hash_felt(felt):
-        return sha256(bytes(felt.val)).digest()
+        return sha256(felt.val.to_bytes(16, "little", signed=False)).digest()
 
     def open(leaves, index, path=[]):
         if len(leaves) == 1:
