@@ -7,6 +7,7 @@ def hash_felt_list(lst):
     hash = sha256(bytearray([i.val % 256 for i in lst])).digest()
     return Felt(int.from_bytes(hash, "big"))
 
+
 def hypercube(n, F=Felt):
     return [list(i) for i in product([F(0), F(1)], repeat=n)]
 

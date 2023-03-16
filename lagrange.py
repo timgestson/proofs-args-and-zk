@@ -1,54 +1,58 @@
+from math import prod
 from felt import Felt
 
 
-class Terms:
-    def __init__(self, poly: set[tuple]):
-        self.poly = set()
-        constant = Felt(1)
-        for coef, const, inv in poly:
-            if coef.val == 0:
-                if inv:
-                    constant *= const.inv()
-                else:
-                    constant *= const
-            else:
-                self.poly.add((coef, const, inv))
-        self.poly.add((Felt(0), constant, False))
+def eval_le(evals, r, Felt=Felt):
+    numerator = set()
+    denominator = set()
 
-    def __mul__(self, other):
-        # Cancel out inverses while multiplying to reduce field ops
-        new = set(self.poly)
-        for coef, const, inv in other.poly:
-            if (coef, const, not inv) in self.poly:
-                new.remove((coef, const, not inv))
-            else:
-                new.add((coef, const, inv))
+    def insert(term, inv=False):
+        if not inv and term in denominator:
+            denominator.remove(term)
+        elif inv and term in numerator:
+            numerator.remove(term)
+        elif inv:
+            denominator.add(term)
+        else:
+            numerator.add(term)
 
-        return Terms(new)
-
-    def eval(self, val):
-        e = Felt(1)
-        for coef, const, inv in self.poly:
-            if inv:
-                e *= (coef * val + const).inv()
-            else:
-                e *= coef * val + const
-        return e
-
-
-def eval_from_points(evals, r):
-    poly = Terms([])
-    for k in range(1, len(evals)):
-        poly *= Terms({(Felt(1), Felt(-k), False), (Felt(0), Felt(-k), True)})
-    sum = poly.eval(r) * evals[0]
-    for i in range(1, len(evals)):
-        poly *= Terms(
-            {
-                (Felt(1), Felt(0) - Felt(i - 1), False),
-                (Felt(1), Felt(-i), True),
-                (Felt(0), Felt(i), True),
-                (Felt(0), Felt(0) - Felt(len(evals) - i), False),
-            }
+    def evaluate(r):
+        return prod(
+            [coef * r + const if coef.val else const for (coef, const) in numerator]
+            + [
+                (coef * r + const).inv() if coef.val else const.inv()
+                for (coef, const) in denominator
+            ],
+            start=Felt(1),
         )
-        sum += poly.eval(r) * evals[i]
-    return sum
+
+    total = Felt(0)
+
+    for k in range(1, len(evals)):
+        insert((Felt(1), Felt(-k)))
+        insert((Felt(0), Felt(-k)), True)
+
+    total += evaluate(r) * evals[0]
+
+    for i in range(1, len(evals)):
+        insert((Felt(1), Felt(0) - Felt(i - 1)))
+        insert((Felt(1), Felt(-i)), True)
+        insert((Felt(0), Felt(i)), True)
+        insert((Felt(0), Felt(0) - Felt(len(evals) - i)))
+        total += evaluate(r) * evals[i]
+
+    return total
+
+
+def eval_mle(evals, point, Felt=Felt):
+    def memo(r, n):
+        if n == 1:
+            return [(Felt(1) - r[0]), r[0]]
+        return [
+            x
+            for expr in memo(r, n - 1)
+            for x in [expr * (Felt(1) - r[n - 1]), expr * r[n - 1]]
+        ]
+
+    cache = memo(point, len(point))
+    return sum([x * y for (x, y) in zip(evals, cache)], Felt(0))
