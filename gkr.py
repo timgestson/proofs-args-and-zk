@@ -17,7 +17,20 @@ class GKR:
         for w in wires:
             ones.add(int(w))
         return [Felt(1) if i in ones else Felt(0) for i in range(2**length)]
-    
+
+    def constrain_to_line(self, w, b, c, ra):
+        t1 = [b[0], c[0]]
+        t2 = [b[1], c[1]]
+        m = eval_le(
+            [
+                eval_mle(w, [eval_mle(t1, [Felt(i)]), eval_mle(t2, [Felt(i)])])
+                for i in range(3)
+            ],
+            ra,
+        )
+        r = [eval_mle(t1, [ra]), eval_mle(t2, [ra])]
+        return (r, m)
+
     def execute_protocol(self):
         (r, m) = self.first_round()
         self.round += 1
@@ -47,7 +60,7 @@ class GKR:
             + eval_mle(mult, r + hc) * (eval_mle(w, hc[:half]) * eval_mle(w, hc[half:]))
             for hc in hypercube(width)
         ]
-        
+
         r = SumcheckProtocol(m, g, 1).execute()
 
         # Evaluate 2 points at once via the line subroutine
@@ -57,18 +70,7 @@ class GKR:
         # Choose random point constrained to the line
         ra = Felt.random()
 
-        t1 = [b[0], c[0]]
-        t2 = [b[1], c[1]]
-        m = eval_le(
-            [
-                eval_mle(w, [eval_mle(t1, [Felt(i)]), eval_mle(t2, [Felt(i)])])
-                for i in range(3)
-            ],
-            ra,
-        )
-        r = [eval_mle(t1, [ra]), eval_mle(t2, [ra])]
-
-        return (r, m)
+        return self.constrain_to_line(w, b, c, ra)
 
     def final_round(self, r, m):
         w = self.evals[-1]
