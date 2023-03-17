@@ -7,18 +7,19 @@ def eval_ule(evals, r, Felt=Felt):
     if 0 <= r.val < len(evals):
         return evals[r.val]
 
-    total = Felt(0)
-    multiplier = Felt(1)
-    for k in range(1, len(evals)):
-        multiplier *= (r - Felt(k)) * Felt(-k).inv()
+    total, multiplier, inversions = Felt(0), Felt(1), Felt(1)
 
+    for k in range(1, len(evals)):
+        multiplier *= r - Felt(k)
+        inversions *= Felt(-k)
+
+    multiplier *= inversions.inv()
     total += multiplier * evals[0]
 
     for i in range(1, len(evals)):
         multiplier *= (
             (r - Felt(i - 1))
-            * (r - Felt(i)).inv()
-            * Felt(i).inv()
+            * ((r - Felt(i)) * Felt(i)).inv()
             * Felt(-(len(evals) - i))
         )
         total += multiplier * evals[i]
