@@ -1,7 +1,7 @@
 from math import log2
 from felt import Felt
 from sumcheck import SumcheckProtocol
-from lagrange import eval_le, eval_mle
+from lagrange import eval_ule, eval_mle
 from util import hypercube
 
 
@@ -21,7 +21,7 @@ class GKR:
     def constrain_to_line(self, w, b, c, ra):
         t1 = [b[0], c[0]]
         t2 = [b[1], c[1]]
-        m = eval_le(
+        m = eval_ule(
             [
                 eval_mle(w, [eval_mle(t1, [Felt(i)]), eval_mle(t2, [Felt(i)])])
                 for i in range(3)

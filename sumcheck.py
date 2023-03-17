@@ -1,7 +1,6 @@
 from math import log2
 from felt import Felt
-from lagrange import eval_le, eval_mle
-from util import hypercube
+from lagrange import eval_ule
 
 
 class SumcheckProtocol:
@@ -72,19 +71,19 @@ class SumcheckVerifier:
         self.g_r = None
 
     def starting_round(self, c, evals, Felt=Felt):
-        g1 = eval_le(evals, Felt(0)) + eval_le(evals, Felt(1))
+        g1 = eval_ule(evals, Felt(0)) + eval_ule(evals, Felt(1))
         assert c == g1
         r = Felt.random()
         self.rs.append(r)
-        self.g_r = eval_le(evals, r, Felt)
+        self.g_r = eval_ule(evals, r, Felt)
         return r
 
     def execute_round(self, evals, Felt=Felt):
-        gj = eval_le(evals, Felt(0), Felt) + eval_le(evals, Felt(1), Felt)
+        gj = eval_ule(evals, Felt(0), Felt) + eval_ule(evals, Felt(1), Felt)
         assert self.g_r == gj
         r = Felt.random()
         self.rs.append(r)
-        self.g_r = eval_le(evals, r, Felt)
+        self.g_r = eval_ule(evals, r, Felt)
         return r
 
     def final_round(self):
