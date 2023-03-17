@@ -19,7 +19,6 @@ class Felt:
         return Felt((self.val - felt.val) % self.prime, self.prime)
 
     def inv(self):
-        # TODO: Extended Euclidean Algorithm
         if self.val == 0:
             return Felt(0, self.prime)
         return self ** (self.prime - 2)

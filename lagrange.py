@@ -1,54 +1,42 @@
 from felt import Felt
 
 
-class Terms:
-    def __init__(self, poly: set[tuple]):
-        self.poly = set()
-        constant = Felt(1)
-        for coef, const, inv in poly:
-            if coef.val == 0:
-                if inv:
-                    constant *= const.inv()
-                else:
-                    constant *= const
-            else:
-                self.poly.add((coef, const, inv))
-        self.poly.add((Felt(0), constant, False))
+def eval_ule(evals, r, Felt=Felt):
+    """Evaluate univariate low-degree extension"""
 
-    def __mul__(self, other):
-        # Cancel out inverses while multiplying to reduce field ops
-        new = set(self.poly)
-        for coef, const, inv in other.poly:
-            if (coef, const, not inv) in self.poly:
-                new.remove((coef, const, not inv))
-            else:
-                new.add((coef, const, inv))
+    if 0 <= r.val < len(evals):
+        return evals[r.val]
 
-        return Terms(new)
-
-    def eval(self, val):
-        e = Felt(1)
-        for coef, const, inv in self.poly:
-            if inv:
-                e *= (coef * val + const).inv()
-            else:
-                e *= coef * val + const
-        return e
-
-
-def eval_from_points(evals, r):
-    poly = Terms([])
+    total = Felt(0)
+    multiplier = Felt(1)
     for k in range(1, len(evals)):
-        poly *= Terms({(Felt(1), Felt(-k), False), (Felt(0), Felt(-k), True)})
-    sum = poly.eval(r) * evals[0]
+        multiplier *= (r - Felt(k)) * Felt(-k).inv()
+
+    total += multiplier * evals[0]
+
     for i in range(1, len(evals)):
-        poly *= Terms(
-            {
-                (Felt(1), Felt(0) - Felt(i - 1), False),
-                (Felt(1), Felt(-i), True),
-                (Felt(0), Felt(i), True),
-                (Felt(0), Felt(0) - Felt(len(evals) - i), False),
-            }
+        multiplier *= (
+            (r - Felt(i - 1))
+            * (r - Felt(i)).inv()
+            * Felt(i).inv()
+            * Felt(-(len(evals) - i))
         )
-        sum += poly.eval(r) * evals[i]
-    return sum
+        total += multiplier * evals[i]
+
+    return total
+
+
+def eval_mle(evals, point, Felt=Felt):
+    """Evaluate multi-linear extension"""
+
+    def memo(r, n):
+        if n == 1:
+            return [(Felt(1) - r[0]), r[0]]
+        return [
+            x
+            for expr in memo(r, n - 1)
+            for x in [expr * (Felt(1) - r[n - 1]), expr * r[n - 1]]
+        ]
+
+    cache = memo(point, len(point))
+    return sum([x * y for (x, y) in zip(evals, cache)], Felt(0))
