@@ -16,16 +16,13 @@ class TriangleProver:
         self.transcript.write_a(self.a)
 
     def prove(self):
-
         p1 = MatMulProver(
             [eval_mle(self.a2, hc) for hc in hypercube(self.logn)],
             [eval_mle(self.a, hc) for hc in hypercube(self.logn)],
             self.c,
             self.transcript.hashchain.copy(),
         )
-
         p1.prove()
-
         self.transcript.add_transcript(p1.transcript)
 
         rands = p1.transcript.randoms
@@ -37,9 +34,7 @@ class TriangleProver:
             eval_mle(self.a2, i + j),
             p1.transcript.hashchain.copy(),
         )
-
         p2.prove()
-
         self.transcript.add_transcript(p2.transcript)
 
         k = p2.transcript.randoms
@@ -71,7 +66,7 @@ class TriangleVerifier:
         rands = self.transcript.transcripts[0].randoms
         (i, j) = (rands[: len(rands) // 2], rands[len(rands) // 2 :])
         k = self.transcript.transcripts[1].randoms
-
+        
         p2_round_k = self.transcript.transcripts[1].evaluations[-1]
         q = self.transcript.q
         w = self.transcript.a

@@ -72,7 +72,6 @@ class MatMulVerifier:
 
 
 class MatMulTranscript:
-
     def __init__(self, hashchain=None):
         self.hashchain = hashchain or sha256()
         self.evaluations = []
