@@ -1,7 +1,7 @@
 from felt import Felt
 
 
-def eval_ule(evals, r, Felt=Felt):
+def eval_ule(evals, r):
     """Evaluate univariate low-degree extension"""
 
     if 0 <= r.val < len(evals):
@@ -27,7 +27,7 @@ def eval_ule(evals, r, Felt=Felt):
     return total
 
 
-def eval_mle(evals, point, Felt=Felt):
+def eval_mle(evals, point):
     """Evaluate multi-linear extension"""
 
     def memo(r, n):
