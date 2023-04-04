@@ -66,8 +66,10 @@ class TriangleVerifier:
         rands = self.transcript.transcripts[0].randoms
         (i, j) = (rands[: len(rands) // 2], rands[len(rands) // 2 :])
         k = self.transcript.transcripts[1].randoms
-        
+
+        p1_round_k = self.transcript.transcripts[0].evaluations[-1]
         p2_round_k = self.transcript.transcripts[1].evaluations[-1]
+        claimed_a2 = self.transcript.transcripts[1].sum
         q = self.transcript.q
         w = self.transcript.a
 
@@ -82,7 +84,10 @@ class TriangleVerifier:
         assert len(q) <= 2 * len(i + j) + 1
         assert eval_ule(q, ra) == eval_mle(w, r)
 
-        assert wa * wb * wc == eval_mle(w, i + j) * (
+        assert wa * claimed_a2 == (
+            eval_ule(p1_round_k, Felt(0)) + eval_ule(p1_round_k, Felt(1))
+        )
+        assert wb * wc == (
             eval_ule(p2_round_k, Felt(0)) + eval_ule(p2_round_k, Felt(1))
         )
 
