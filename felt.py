@@ -2,13 +2,17 @@ import random
 
 
 class Felt:
-    def __init__(self, val, prime=2**61 - 1):
+    def __init__(self, val, prime=2 ** 61 - 1):
         self.val = val % prime
         self.prime = prime
 
     @classmethod
-    def random(cls, prime=2**61 - 1):
+    def random(cls, prime=2 ** 61 - 1):
         return cls(random.randrange(0, prime), prime)
+
+    @classmethod
+    def from_randomness(cls, randomness, prime=2 ** 61 - 1):
+        return cls(int.from_bytes(randomness, "big"), prime)
 
     def __add__(self, felt):
         assert self.prime == felt.prime
@@ -40,31 +44,3 @@ class Felt:
 
     def __hash__(self):
         return hash(str(self))
-
-
-class GLFelt(Felt):
-    """Goldilocks Feild 2^64-2-32+1 with 2^32 roots"""
-
-    def __init__(self, val, _=None):
-        super().__init__(val, 0xFFFFFFFF00000001)
-
-    def roots_of_unity(n):
-        root = GLFelt(1753635133440165772)
-        order = 2**32
-        while order != n:
-            root = root**2
-            order = order / 2
-        return [root**x for x in range(n)]
-
-    def fft(vals, domain):
-        if len(vals) == 1:
-            return vals
-
-        odds = GLFelt.fft(vals[1::2], domain[::2])
-        evens = GLFelt.fft(vals[::2], domain[::2])
-        ans = [GLFelt(0)] * len(vals)
-        length = len(odds)
-        for i, (o, e) in enumerate(zip(odds, evens)):
-            ans[i] = e + domain[i] * o
-            ans[i + length] = e - domain[i] * o
-        return ans
