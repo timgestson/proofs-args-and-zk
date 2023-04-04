@@ -3,6 +3,7 @@ from math import log2
 from felt import Felt
 from lagrange import eval_ule
 
+
 class MatMulProver:
     def __init__(self, a_evals, b_evals, c, randomness=None):
         self.rounds = int(log2(len(a_evals)))
@@ -17,7 +18,7 @@ class MatMulProver:
         self.transcript.write_rounds(self.rounds)
         self.transcript.write_sum(self.c)
         self.starting_round()
-        for _ in range(1,self.rounds+1):
+        for _ in range(1, self.rounds + 1):
             r = Felt.from_randomness(self.transcript.randomness())
             self.transcript.write_random(r)
             self.execute_round(r)
@@ -38,17 +39,15 @@ class MatMulProver:
 
     def evaluate_points(self):
         half = len(self.a) // 2
-        zero = sum([a * b for (a, b) in zip(self.a[:half], self.b[:half])], Felt(0))
-        one = sum([a * b for (a, b) in zip(self.a[half:], self.b[half:])], Felt(0))
-        two = sum(
-            [
-                (Felt(2) * a1 - a0) * (Felt(2) * b1 - b0)
-                for ((a0, b0), (a1, b1)) in zip(
-                    zip(self.a[:half], self.b[:half]), zip(self.a[half:], self.b[half:])
+        zero, one, two = Felt(0), Felt(0), Felt(0)
+        for i in range(len(self.a)):
+            if i < half:
+                zero += self.a[i] * self.b[i]
+                two += (Felt(2) * self.a[half + i] - self.a[i]) * (
+                    Felt(2) * self.b[half + i] - self.b[i]
                 )
-            ],
-            Felt(0),
-        )
+            else:
+                one += self.a[i] * self.b[i]
         return [zero, one, two]
 
 
