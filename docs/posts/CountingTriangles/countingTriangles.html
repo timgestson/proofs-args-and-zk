@@ -179,7 +179,20 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <section id="multivariate-sumcheck" class="level2">
 <h2 class="anchored" data-anchor-id="multivariate-sumcheck">Multivariate Sumcheck</h2>
 <p><em>A breakdown of its efficient implementation</em></p>
-<p>Sumcheck is introduced in Chapter 4 of <a href="https://people.cs.georgetown.edu/jthaler/ProofsArgsAndZK.pdf">Proofs, Arguments, and Zero-Knowledge</a> as a core building block of Interactive Proofs. The chapter outlines the power and versatility of Sumcheck, a tool Thaler describes as “the hammer” that makes many Interactive Proof problems look like a nail. Included, are details of how Sumcheck can be used to prove the computation of <strong>counting triangles in a graph</strong> with little additional work. This is a rare class of proof is considered “Super-Efficient” due to the cost profile of the Prover and Verifier. In this post, we implement the IP’s efficient implementation and break down the code.</p>
+<p>Sumcheck is introduced in Chapter 4 of <a href="https://people.cs.georgetown.edu/jthaler/ProofsArgsAndZK.pdf">Proofs, Arguments, and Zero-Knowledge</a> as a core building block of Interactive Proofs. The chapter outlines the power and versatility of Sumcheck, a tool Thaler describes as “the hammer” that makes many Interactive Proof problems look like a nail. Included, are details of how Sumcheck can be used to prove the computation of <strong>counting triangles in a graph</strong> with little additional work. This is a rare class of proof is considered “Super-Efficient” due to the cost profile of the Prover and Verifier. In this post, we implement the IP and break down <a href="https://github.com/timgestson/proofs-args-and-zk">the code</a>.</p>
+<div class="callout-warning callout callout-style-default callout-captioned">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-caption-container flex-fill">
+Warning
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>This will not go into much detail compared to Proofs, Arguments, and Zero-Knowledge. Read chapters 1-4 to be introduced to the subject matter.</p>
+</div>
+</div>
 <section id="the-building-blocks" class="level3">
 <h3 class="anchored" data-anchor-id="the-building-blocks">The Building Blocks</h3>
 <section id="finite-fields" class="level4">
@@ -230,7 +243,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 </section>
 <section id="evaluating-multilinear-extensions" class="level4">
 <h4 class="anchored" data-anchor-id="evaluating-multilinear-extensions">Evaluating MultiLinear Extensions</h4>
-<p>Multilinear polynomials can be specified by their evaluations over the boolean hypercube. Thaler gives an efficient formula to evaluate a multilinear polynomial at a single point given the hypercube evaluations using dynamic programing.</p>
+<p>Multilinear polynomials can be specified by their evaluations over the boolean hypercube. Thaler gives an efficient formula to evaluate a multilinear polynomial at a single point given the hypercube evaluations using dynamic programming.</p>
 <div class="cell" data-execution_count="3">
 <details>
 <summary>Evaluate Multilinear Extension</summary>
@@ -389,7 +402,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> [zero, one, two]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </div>
-<p>Since the product of 2 multilinear polynomials will be quadratic (degree 2), we can specify <span class="math inline">\(S_i\)</span> it by sending 3 points to the Verifier. Thaler gives us a way to do this in a single pass by using the fact that the leading bit will be <span class="math inline">\(0\)</span> for the first half of the evaluations and <span class="math inline">\(1\)</span> for the second half. When there is only a single evaluation we handle the exception and send back the single point surrounded by zeros.</p>
+<p>Since the product of 2 multilinear polynomials will be quadratic (degree 2), we can specify <span class="math inline">\(S_i\)</span> it by sending 3 points to the Verifier. Thaler gives us a way to do this in a single pass by using the fact that the leading bit will be <span class="math inline">\(0\)</span> for the first half of the evaluations and <span class="math inline">\(1\)</span> for the second half.</p>
 <p>To get <span class="math inline">\(S_i(2)\)</span>, we leverage Equation 4.13 <span class="math display">\[h(r_1,...,r_{i−1},2,b_{i+1},...,b_l) = 2·h(r_1,...,r_{i−1},1,b_{i+1},...,b_l)−h(r_1,...,r_{i−1},0,b_{i+1},...,b_l)\]</span> We take this opportunity to multiply the <span class="math inline">\(p_1\)</span> and <span class="math inline">\(p_2\)</span> together in order to provide the correct <span class="math inline">\(S_i\)</span> to the Verifier.</p>
 </section>
 <section id="the-verifier" class="level4">
@@ -412,7 +425,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a>            <span class="cf">assert</span> g_l <span class="op">==</span> g_r</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </div>
-<p>At the end of Sumcheck Protocol, the Verifier must also evaluate an oracle of <span class="math inline">\(g(r_1..r_{log(n)})\)</span> to complete the verification, but many times how this is done is dependent on the larger protocol so we left it out of the scope of this Verifier.</p>
+<p>At the end of Sumcheck Protocol, the Verifier must also evaluate an oracle of <span class="math inline">\(g(r_1..r_{log(n)})\)</span> to complete the verification, but how and when this happens is dependent on the larger protocol so we left it out of the scope of this Verifier.</p>
 </section>
 </section>
 <section id="counting-triangles" class="level2">
