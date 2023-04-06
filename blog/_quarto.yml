@@ -1,0 +1,14 @@
+project:
+  type: website
+  output-dir: ../docs
+
+website:
+  title: ""
+  navbar:
+    right:
+      - icon: github
+        href: https://github.com/timgestson/proofs-args-and-zk
+format:
+  html:
+    theme: flatly
+    css: styles.css

@@ -18,10 +18,11 @@ class SumcheckProver:
         self.transcript.write_rounds(self.rounds)
         self.transcript.write_sum(self.c)
         self.starting_round()
-        for _ in range(1, self.rounds + 1):
+        for _ in range(1, self.rounds):
             r = Felt.from_randomness(self.transcript.randomness())
             self.transcript.write_random(r)
             self.execute_round(r)
+        self.transcript.write_random(r)
 
     def starting_round(self):
         self.transcript.write_evaluations(self.evaluate_points())
@@ -38,9 +39,6 @@ class SumcheckProver:
         self.transcript.write_evaluations(self.evaluate_points())
 
     def evaluate_points(self):
-        if len(self.p1) == 1:
-            return [Felt(0), self.p1[0] * self.p2[0], Felt(0)]
-
         half = len(self.p1) // 2
         zero, one, two = Felt(0), Felt(0), Felt(0)
         for i in range(half):
@@ -62,7 +60,7 @@ class SumcheckVerifier:
         ) + eval_ule(self.transcript.evaluations[0], Felt(1))
         assert len(self.transcript.evaluations[0]) <= self.transcript.degree + 1
 
-        for i in range(self.transcript.rounds):
+        for i in range(self.transcript.rounds-1):
             g_l = eval_ule(self.transcript.evaluations[i], self.transcript.randoms[i])
             assert len(self.transcript.evaluations[i + 1]) <= self.transcript.degree + 1
             g_r = eval_ule(self.transcript.evaluations[i + 1], Felt(0)) + eval_ule(
