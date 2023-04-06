@@ -179,7 +179,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <section id="multivariate-sumcheck" class="level2">
 <h2 class="anchored" data-anchor-id="multivariate-sumcheck">Multivariate Sumcheck</h2>
 <p><em>A breakdown of its efficient implementation</em></p>
-<p>Sumcheck is introduced in Chapter 4 of <a href="https://people.cs.georgetown.edu/jthaler/ProofsArgsAndZK.pdf">Proofs, Arguments, and Zero-Knowledge</a> as a core building block of interactive proofs. The chapter outlines the power and versatility of Sumcheck, a tool Thaler describes as “the hammer” that makes many interactive proof problems look like a nail. Included, are details of how Sumcheck can be used to prove the computation of <strong>counting triangles in a graph</strong> with little additional work. This is a rare class of proof is considered “Super-Efficient” due to the lean cost profile of the Prover and Verifier. In this post, we implement the IP and break down <a href="https://github.com/timgestson/proofs-args-and-zk">the code</a>.</p>
+<p>Sumcheck is introduced in Chapter 4 of <a href="https://people.cs.georgetown.edu/jthaler/ProofsArgsAndZK.pdf">Proofs, Arguments, and Zero-Knowledge</a> as a core building block of interactive proofs. The chapter outlines the power and versatility of Sumcheck, a tool Thaler describes as “the hammer” that makes many interactive proof problems look like a nail. Included, are details on how Sumcheck can be used to prove the computation of <strong>counting triangles in a graph</strong> with little additional work. This rare class of proof is considered “Super-Efficient” due to the lean cost profile of the Prover and Verifier. In this post, we implement the IP and break down <a href="https://github.com/timgestson/proofs-args-and-zk">the code</a>.</p>
 <div class="callout-warning callout callout-style-default callout-captioned">
 <div class="callout-header d-flex align-content-center">
 <div class="callout-icon-container">
@@ -371,7 +371,7 @@ Warning
 <span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.rs <span class="op">=</span> []</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </div>
-<p>We start the Prover by storing the evaluations of <span class="math inline">\(p_1\)</span> and <span class="math inline">\(p_2\)</span>. Each round we can half the data structure leveraging <strong>Leema 3.8</strong>’s <span class="math display">\[p(x_1,x_2,...,x_l) = x_1 · p(1,x_2,...,x_l)+(1−x_1)· p(0,x_2,...,x_l)\]</span> Below is a visual from the book.</p>
+<p>We start the Prover by storing the evaluations of <span class="math inline">\(p_1\)</span> and <span class="math inline">\(p_2\)</span>. In each round, we half the data structure leveraging <strong>Leema 3.8</strong>’s <span class="math display">\[p(x_1,x_2,...,x_l) = x_1 · p(1,x_2,...,x_l)+(1−x_1)· p(0,x_2,...,x_l)\]</span> Below is a visual from the book.</p>
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
 <p><img src="./proversDataStructure.png" class="img-fluid figure-img" style="width:80.0%"></p>
@@ -413,7 +413,7 @@ Warning
 </section>
 <section id="the-verifier" class="level4">
 <h4 class="anchored" data-anchor-id="the-verifier">The Verifier</h4>
-<p>The Verifier can take these sumcheck claims and make sure the Prover is being honest by verifying, round by round, that the polynomial <span class="math inline">\(S_i(0)\)</span> and <span class="math inline">\(S_i(1)\)</span> sum to the correct values and that <span class="math inline">\(degree(S_i) &lt;= degree(g)\)</span>. In this implementation, the Verifier verifies the all rounds of the fiat-shamir transcript at once.</p>
+<p>The Verifier can take these sumcheck claims and make sure the Prover is being honest by verifying, that the polynomial <span class="math inline">\(S_i(0)\)</span> and <span class="math inline">\(S_i(1)\)</span> sum to the correct values and that <span class="math inline">\(degree(S_i) &lt;= degree(g)\)</span>. In this implementation, the Verifier verifies the all rounds of the fiat-shamir transcript at once.</p>
 <div class="cell" data-execution_count="10">
 <div class="cell-output cell-output-display" data-execution_count="10">
 <div class="sourceCode" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> verify(<span class="va">self</span>):</span>
@@ -431,12 +431,12 @@ Warning
 <span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a>            <span class="cf">assert</span> g_l <span class="op">==</span> g_r</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </div>
-<p>At the end of Sumcheck protocol, the Verifier must also evaluate an oracle of <span class="math inline">\(g(r_1..r_{log(n)})\)</span> to complete the verification, but how and when this happens is dependent on the larger protocol so we left it out of the scope of this Verifier.</p>
+<p>At the end of Sumcheck protocol, the Verifier must also evaluate an oracle of <span class="math inline">\(g(r_1..r_{log(n)})\)</span> to complete the verification. However, when this happens is dependent on the larger protocol so we left it out of the scope of this Verifier.</p>
 </section>
 </section>
 <section id="counting-triangles" class="level2">
 <h2 class="anchored" data-anchor-id="counting-triangles">Counting Triangles</h2>
-<p>An efficient way to caluculate the number of triangles in a graph is to take the adjacency matrix and square it, then multiply it by the adjacency matrix again and divide by 6. <span class="math display">\[Triangles = (adj^2 * adj) / 6\]</span> Using Sumcheck and the Super-Efficient IP for MatMult protocol which Thaler outlines in <strong>Section 4.4</strong>, we can Prove the calculation of the Triangle count with a small amount of extra work.</p>
+<p>An efficient way to calculate the number of triangles in a graph is to take the adjacency matrix and square it, then multiply it by the adjacency matrix again and divide by 6. <span class="math display">\[Triangles = (adj^2 * adj) / 6\]</span> Using Sumcheck and the Super-Efficient IP for MatMult protocol which Thaler outlines in <strong>Section 4.4</strong>, we can Prove the calculation of the Triangle count with a small amount of extra work.</p>
 <section id="the-calculation" class="level4">
 <h4 class="anchored" data-anchor-id="the-calculation">The Calculation</h4>
 <p>Let’s calculate the number of triangles in a square that is bisected by a line to form 2 triangles.</p>
@@ -494,7 +494,7 @@ Warning
 <span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </div>
-<p>Now we have to prove <span class="math inline">\(\tilde{a}^2 * \tilde{a}\)</span> as the first phase of the protocol. We instantiate sumcheck and create a proof to add to the Counting Triangles transcript.</p>
+<p>Now we have to prove <span class="math inline">\(\tilde{a}^2 * \tilde{a}\)</span> as the first phase of the protocol. We instantiate Sumcheck and create a proof to add to the Counting Triangles transcript.</p>
 <div class="cell" data-execution_count="13">
 <div class="cell-output cell-output-display" data-execution_count="13">
 <div class="sourceCode" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> prove(<span class="va">self</span>):</span>
@@ -539,8 +539,8 @@ Note
 <span id="cb14-13"><a href="#cb14-13" aria-hidden="true" tabindex="-1"></a></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </div>
-<p>We take the <span class="math inline">\(r\)</span>s that the prover commited to in the first round of Sumcheck and set them to <span class="math inline">\(i\)</span> and <span class="math inline">\(j\)</span>. Notice that we connot just pass in evaluations as-is like we did in the first Sumcheck instance. The MatMult IP is defined by: <span class="math display">\[fc(i,j)=∑{k\in{\{0,1\}}} ^{log(n)} fa(i,k)·fb(k,j)\]</span> Here, <span class="math inline">\(\tilde{a}\)</span> is equal to <span class="math inline">\(fa\)</span> and <span class="math inline">\(fb\)</span> and we are summing up on the hypercube in order to instantiate a Sumcheck instance that forces the Prover to commit to <span class="math inline">\(k\)</span>.</p>
-<p>Now that we have run Sumcheck, we have <span class="math inline">\(i\)</span>, <span class="math inline">\(j\)</span>, and <span class="math inline">\(k\)</span> so we theoretically have given the Verifier enough information to prove the validity of the computation. We would just need to evaluate <span class="math inline">\(\tilde{a}(i+j)\)</span>, <span class="math inline">\(\tilde{a}(k+j)\)</span>, and <span class="math inline">\(\tilde{a}(i+k)\)</span> to complete the verification. This is alot of work for the Verifier though and it turns out that it can instead be done by the Prover.</p>
+<p>We take the <span class="math inline">\(r\)</span>s that the prover commited to in the first round of Sumcheck and set them to <span class="math inline">\(i\)</span> and <span class="math inline">\(j\)</span>. Notice that we cannot just pass in evaluations as-is like we did in the first Sumcheck instance. The MatMult IP is defined by: <span class="math display">\[fc(i,j)=∑{k\in{\{0,1\}}} ^{log(n)} fa(i,k)·fb(k,j)\]</span> Here, <span class="math inline">\(\tilde{a}\)</span> is equal to <span class="math inline">\(fa\)</span> and <span class="math inline">\(fb\)</span> and we are summing up on the hypercube in order to instantiate a Sumcheck instance that forces the Prover to commit to <span class="math inline">\(k\)</span>.</p>
+<p>Now that we have run Sumcheck, we have <span class="math inline">\(i\)</span>, <span class="math inline">\(j\)</span>, and <span class="math inline">\(k\)</span>. This is enough information for the Verifier to prove the validity of the computation. We would just need to evaluate <span class="math inline">\(\tilde{a}(i+j)\)</span>, <span class="math inline">\(\tilde{a}(k+j)\)</span>, and <span class="math inline">\(\tilde{a}(i+k)\)</span> to complete the verification. This is alot of work for the Verifier and it turns out that it can instead be done by the Prover.</p>
 </section>
 <section id="the-useful-subroutine" class="level4">
 <h4 class="anchored" data-anchor-id="the-useful-subroutine">The Useful Subroutine</h4>
@@ -575,7 +575,7 @@ Note
 <span id="cb16-13"><a href="#cb16-13" aria-hidden="true" tabindex="-1"></a></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </div>
-<p>The Verifier needs <span class="math inline">\(\tilde{W}(a)\)</span>, <span class="math inline">\(\tilde{W}(b)\)</span>, and <span class="math inline">\(\tilde{W}(c)\)</span> in order to perform the last verification step of the Counting Triangles IP. By recieving <span class="math inline">\(q\)</span> from the Prover, the Verifier knows that it recieved those values as <span class="math inline">\(q(0)\)</span>, <span class="math inline">\(q(1)\)</span>, and <span class="math inline">\(q(2)\)</span>. To be convinced that the values that she recieved were correct, the Verifier picks a random field element <span class="math inline">\(r*\)</span> (<code>ra</code> in the source code), and uses it to create a point <span class="math inline">\(r\)</span> that is on line <span class="math inline">\(\ell\)</span>. The Verifier is convinced of <span class="math inline">\(\tilde{W}(a)\)</span>, <span class="math inline">\(\tilde{W}(b)\)</span>, and <span class="math inline">\(\tilde{W}(c)\)</span> if <span class="math inline">\(q\)</span> is a maximum degree of <span class="math inline">\(2 * log(n)\)</span> and if <span class="math inline">\(q(r*) == \tilde{W}(r)\)</span>.</p>
+<p>The Verifier needs <span class="math inline">\(\tilde{W}(a)\)</span>, <span class="math inline">\(\tilde{W}(b)\)</span>, and <span class="math inline">\(\tilde{W}(c)\)</span> in order to perform the last verification step of the Counting Triangles IP. By recieving <span class="math inline">\(q\)</span> from the Prover, the Verifier knows that it recieved those values as <span class="math inline">\(q(0)\)</span>, <span class="math inline">\(q(1)\)</span>, and <span class="math inline">\(q(2)\)</span>. To be convinced that the values that they recieved were correct, the Verifier picks a random field element <span class="math inline">\(r*\)</span> (<code>ra</code> in the source code), and uses it to create a point <span class="math inline">\(r\)</span> that is on line <span class="math inline">\(\ell\)</span>. The Verifier is convinced of <span class="math inline">\(\tilde{W}(a)\)</span>, <span class="math inline">\(\tilde{W}(b)\)</span>, and <span class="math inline">\(\tilde{W}(c)\)</span> if <span class="math inline">\(q\)</span> has a maximum degree of <span class="math inline">\(2 * log(n)\)</span> and if <span class="math inline">\(q(r*) == \tilde{W}(r)\)</span>.</p>
 </section>
 <section id="the-final-assertion" class="level4">
 <h4 class="anchored" data-anchor-id="the-final-assertion">The Final Assertion</h4>
