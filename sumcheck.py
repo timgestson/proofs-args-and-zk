@@ -4,13 +4,13 @@ from felt import Felt
 from lagrange import eval_ule
 
 
-class MatMulProver:
-    def __init__(self, a_evals, b_evals, c, randomness=None):
-        self.rounds = int(log2(len(a_evals)))
-        self.transcript = MatMulTranscript(randomness)
+class SumcheckProver:
+    def __init__(self, p1, p2, c, randomness=None):
+        self.rounds = int(log2(len(p1)))
+        self.transcript = SumcheckTranscript(randomness)
         self.c = c
-        self.a = a_evals
-        self.b = b_evals
+        self.p1 = p1
+        self.p2 = p2
         self.rs = []
 
     def prove(self):
@@ -28,30 +28,31 @@ class MatMulProver:
 
     def execute_round(self, r):
         self.rs.append(r)
-        half = len(self.a) // 2
-        self.a = [
-            (Felt(1) - r) * a + r * b for (a, b) in zip(self.a[:half], self.a[half:])
+        half = len(self.p1) // 2
+        self.p1 = [
+            (Felt(1) - r) * a + r * b for (a, b) in zip(self.p1[:half], self.p1[half:])
         ]
-        self.b = [
-            (Felt(1) - r) * a + r * b for (a, b) in zip(self.b[:half], self.b[half:])
+        self.p2 = [
+            (Felt(1) - r) * a + r * b for (a, b) in zip(self.p2[:half], self.p2[half:])
         ]
         self.transcript.write_evaluations(self.evaluate_points())
 
     def evaluate_points(self):
-        half = len(self.a) // 2
+        if len(self.p1) == 1:
+            return [Felt(0), self.p1[0] * self.p2[0], Felt(0)]
+
+        half = len(self.p1) // 2
         zero, one, two = Felt(0), Felt(0), Felt(0)
-        for i in range(len(self.a)):
-            if i < half:
-                zero += self.a[i] * self.b[i]
-                two += (Felt(2) * self.a[half + i] - self.a[i]) * (
-                    Felt(2) * self.b[half + i] - self.b[i]
-                )
-            else:
-                one += self.a[i] * self.b[i]
+        for i in range(half):
+            zero += self.p1[i] * self.p2[i]
+            one += self.p1[half + i] * self.p2[half + i]
+            two += (Felt(2) * self.p1[half + i] - self.p1[i]) * (
+                Felt(2) * self.p2[half + i] - self.p2[i]
+            )
         return [zero, one, two]
 
 
-class MatMulVerifier:
+class SumcheckVerifier:
     def __init__(self, transcript):
         self.transcript = transcript
 
@@ -70,7 +71,7 @@ class MatMulVerifier:
             assert g_l == g_r
 
 
-class MatMulTranscript:
+class SumcheckTranscript:
     def __init__(self, hashchain=None):
         self.hashchain = hashchain or sha256()
         self.evaluations = []
