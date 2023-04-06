@@ -176,16 +176,16 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 
 
 
-<section id="multivariate-sumcheck" class="level3">
-<h3 class="anchored" data-anchor-id="multivariate-sumcheck">Multivariate Sumcheck</h3>
-<p>Sumcheck is introduced in Chapter 4 of <a href="https://people.cs.georgetown.edu/jthaler/ProofsArgsAndZK.pdf">Proofs, Arguments, and Zero-Knowledge</a> as a core building block of Interactive Proofs. The dense chapter outlines the power of Multivariate Sumcheck, a tool Thaler describes as “the hammer” that makes many Interactive Proof problems look like a nail. An interesting example of counting triangles then proving the computation with little additional work is described. This is a rare class of proof considered “Super-Efficient” due to the cost profile of the Prover and Verifier. In this post, we implement the IP’s efficient implementation and break down the code.</p>
-</section>
+<section id="multivariate-sumcheck" class="level2">
+<h2 class="anchored" data-anchor-id="multivariate-sumcheck">Multivariate Sumcheck</h2>
+<p><em>A breakdown of its efficient implementation</em></p>
+<p>Sumcheck is introduced in Chapter 4 of <a href="https://people.cs.georgetown.edu/jthaler/ProofsArgsAndZK.pdf">Proofs, Arguments, and Zero-Knowledge</a> as a core building block of Interactive Proofs. The dense chapter outlines the power of Sumcheck, a tool Thaler describes as “the hammer” that makes many Interactive Proof problems look like a nail. Included, are details of how Sumcheck can be used to count triangles then prove the computation with little additional work. This is a rare class of proof considered “Super-Efficient” due to the cost profile of the Prover and Verifier. In this post, we implement the IP’s efficient implementation and break down the code.</p>
 <section id="the-building-blocks" class="level3">
 <h3 class="anchored" data-anchor-id="the-building-blocks">The Building Blocks</h3>
 <section id="finite-fields" class="level4">
 <h4 class="anchored" data-anchor-id="finite-fields">Finite Fields</h4>
 <p>All of the Math in Interactive Proofs and SNARKs happen over a finite field. Here, we define a very simple finite field size <span class="math inline">\(2^{61}\)</span> for this example. We will refer to elements of that field as <code>Felt</code> which is an abbreviation for Field Element.</p>
-<div class="cell" data-execution_count="2">
+<div class="cell" data-execution_count="16">
 <details>
 <summary>Finite Field Element</summary>
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Felt:</span>
@@ -231,7 +231,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <section id="evaluating-multilinear-extensions" class="level4">
 <h4 class="anchored" data-anchor-id="evaluating-multilinear-extensions">Evaluating MultiLinear Extensions</h4>
 <p>Multilinear polynomials can be specified by their evaluations over the boolean hypercube. Thaler gives an efficient formula to evaluate a multilinear polynomial at a single point given the hypercube evaluations using dynamic programing.</p>
-<div class="cell" data-execution_count="3">
+<div class="cell" data-execution_count="17">
 <details>
 <summary>Evaluate Multilinear Extension</summary>
 <div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> eval_mle(evals, point):</span>
@@ -252,7 +252,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <section id="evaluating-low-degree-extensions" class="level4">
 <h4 class="anchored" data-anchor-id="evaluating-low-degree-extensions">Evaluating Low-Degree Extensions</h4>
 <p>Univariate polynomials can be specified by <span class="math inline">\(degree(n) + 1\)</span> points. We can use lagrange interpolation and rely on cancellations and batch inversions to achieve fast evaluations of a polynomial defined by its evaluations from <span class="math inline">\(0..degree(n)\)</span>.</p>
-<div class="cell" data-execution_count="4">
+<div class="cell" data-execution_count="18">
 <details>
 <summary>Evaluate Low-Degree Extension</summary>
 <div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> eval_ule(evals, r):</span>
@@ -283,7 +283,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <section id="the-boolean-hypercube" class="level4">
 <h4 class="anchored" data-anchor-id="the-boolean-hypercube">The Boolean Hypercube</h4>
 <p>The boolean hypercube is all combinations of <span class="math inline">\(0\)</span> and <span class="math inline">\(1\)</span> for a given <span class="math inline">\(n\)</span> which defines the length. Sumcheck verifies the sum of a polynomials evaluation over the boolean hypercube.</p>
-<div class="cell">
+<div class="cell" data-execution_count="19">
 <details>
 <summary>The Boolean Hypercube</summary>
 <div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> itertools <span class="im">import</span> product</span>
@@ -292,23 +292,64 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 </details>
 </div>
 </section>
+<section id="fiat-shamir" class="level4">
+<h4 class="anchored" data-anchor-id="fiat-shamir">Fiat-Shamir</h4>
+<p>In order to make the protocol in this post non-interactive and create a transcript that the Verifier can use to verify the Provers computations. The Prover must draw verifiable randomness from a hashchain of public inputs and intermediate elements of the protocol.</p>
+<div class="cell">
+<details>
+<summary>Example Transcript Class</summary>
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> SumcheckTranscript:</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>, hashchain<span class="op">=</span><span class="va">None</span>):</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.hashchain <span class="op">=</span> hashchain <span class="kw">or</span> sha256()</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.evaluations <span class="op">=</span> []</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.degree <span class="op">=</span> <span class="va">None</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.rounds <span class="op">=</span> <span class="va">None</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.randoms <span class="op">=</span> []</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> write_evaluations(<span class="va">self</span>, lst):</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> f <span class="kw">in</span> lst:</span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>            <span class="va">self</span>.hashchain.update(f.val.to_bytes(<span class="dv">8</span>, <span class="st">"big"</span>))</span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.evaluations.append(lst)</span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> write_sum(<span class="va">self</span>, c):</span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.hashchain.update(c.val.to_bytes(<span class="dv">8</span>, <span class="st">"big"</span>))</span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.<span class="bu">sum</span> <span class="op">=</span> c</span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> write_degree(<span class="va">self</span>, d):</span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.hashchain.update(d.to_bytes(<span class="dv">2</span>, <span class="st">"big"</span>))</span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.degree <span class="op">=</span> d</span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> write_random(<span class="va">self</span>, r):</span>
+<span id="cb5-23"><a href="#cb5-23" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.hashchain.update(r.val.to_bytes(<span class="dv">8</span>, <span class="st">"big"</span>))</span>
+<span id="cb5-24"><a href="#cb5-24" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.randoms.append(r)</span>
+<span id="cb5-25"><a href="#cb5-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-26"><a href="#cb5-26" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> write_rounds(<span class="va">self</span>, rounds):</span>
+<span id="cb5-27"><a href="#cb5-27" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.hashchain.update(rounds.to_bytes(<span class="dv">2</span>, <span class="st">"big"</span>))</span>
+<span id="cb5-28"><a href="#cb5-28" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.rounds <span class="op">=</span> rounds</span>
+<span id="cb5-29"><a href="#cb5-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-30"><a href="#cb5-30" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> randomness(<span class="va">self</span>):</span>
+<span id="cb5-31"><a href="#cb5-31" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">self</span>.hashchain.digest()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+</section>
+</section>
 </section>
 <section id="sumcheck" class="level2">
 <h2 class="anchored" data-anchor-id="sumcheck">Sumcheck</h2>
 <section id="the-efficient-prover" class="level4">
 <h4 class="anchored" data-anchor-id="the-efficient-prover">The Efficient Prover</h4>
 <p>When the sumcheck polynomial <span class="math inline">\(g\)</span> is made up of the product of many different multilinear polynomials (in the form of <span class="math inline">\(g = p_1 * p_2 ... p_k\)</span>), the prover can take advantage of a huge optimizations. The evaluations of <span class="math inline">\(p_i\)</span> can be stored separately in the Prover’s internal data structure. Our implementation covers the scenario for when <span class="math inline">\(g = p_1 * p_2\)</span> because that is all that is needed for counting triangles.</p>
-<div class="cell" data-execution_count="5">
-<div class="cell-output cell-output-display" data-execution_count="5">
-<div class="sourceCode" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> SumcheckProver:</span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>, p1, p2, c, randomness<span class="op">=</span><span class="va">None</span>):</span>
-<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.rounds <span class="op">=</span> <span class="bu">int</span>(log2(<span class="bu">len</span>(p1)))</span>
-<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.transcript <span class="op">=</span> SumcheckTranscript(randomness)</span>
-<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.c <span class="op">=</span> c</span>
-<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.p1 <span class="op">=</span> p1</span>
-<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.p2 <span class="op">=</span> p2</span>
-<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.rs <span class="op">=</span> []</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell" data-execution_count="20">
+<div class="cell-output cell-output-display" data-execution_count="20">
+<div class="sourceCode" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> SumcheckProver:</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>, p1, p2, c, randomness<span class="op">=</span><span class="va">None</span>):</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.rounds <span class="op">=</span> <span class="bu">int</span>(log2(<span class="bu">len</span>(p1)))</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.transcript <span class="op">=</span> SumcheckTranscript(randomness)</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.c <span class="op">=</span> c</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.p1 <span class="op">=</span> p1</span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.p2 <span class="op">=</span> p2</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.rs <span class="op">=</span> []</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </div>
 <p>We start the Prover by storing the evaluations of <span class="math inline">\(p_1\)</span> and <span class="math inline">\(p_2\)</span>. Each round we can half the data structure leveraging <em>Leema 3.8</em>’s <span class="math display">\[p(x_1,x_2,...,x_l) = x_1 · p(1,x_2,...,x_l)+(1−x_1)· p(0,x_2,...,x_l)\]</span> Below is a visual from the book.</p>
@@ -319,36 +360,25 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 </figure>
 </div>
 <p>The Prover now sets <span class="math inline">\(x_i\)</span> to <span class="math inline">\(r\)</span> and updates its data structure in-place. Just like in the picture, we can divide the evaluations in half and zip those together in order to get the values we need for <em>Lemma 3.8</em>.</p>
-<div class="cell" data-execution_count="6">
-<div class="cell-output cell-output-display" data-execution_count="6">
-<div class="sourceCode" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> execute_round(<span class="va">self</span>, r):</span>
-<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.rs.append(r)</span>
-<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>        half <span class="op">=</span> <span class="bu">len</span>(<span class="va">self</span>.p1) <span class="op">//</span> <span class="dv">2</span></span>
-<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.p1 <span class="op">=</span> [</span>
-<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>            (Felt(<span class="dv">1</span>) <span class="op">-</span> r) <span class="op">*</span> a <span class="op">+</span> r <span class="op">*</span> b <span class="cf">for</span> (a, b) <span class="kw">in</span> <span class="bu">zip</span>(<span class="va">self</span>.p1[:half], <span class="va">self</span>.p1[half:])</span>
-<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>        ]</span>
-<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.p2 <span class="op">=</span> [</span>
-<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>            (Felt(<span class="dv">1</span>) <span class="op">-</span> r) <span class="op">*</span> a <span class="op">+</span> r <span class="op">*</span> b <span class="cf">for</span> (a, b) <span class="kw">in</span> <span class="bu">zip</span>(<span class="va">self</span>.p2[:half], <span class="va">self</span>.p2[half:])</span>
-<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>        ]</span>
-<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.transcript.write_evaluations(<span class="va">self</span>.evaluate_points())</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell" data-execution_count="21">
+<div class="cell-output cell-output-display" data-execution_count="21">
+<div class="sourceCode" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> starting_round(<span class="va">self</span>):</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.transcript.write_evaluations(<span class="va">self</span>.evaluate_points())</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </div>
 <p>The power of this is that we no longer have to sum up <span class="math inline">\(x_{i+1}..x_l\)</span> on the hypercube to get the polynomial <span class="math inline">\(S_i\)</span> to send to the prover. We can take advantage of the properties of the multilinear polynomial in order to save the Prover significant time.</p>
-<div class="cell" data-execution_count="7">
-<div class="cell-output cell-output-display" data-execution_count="7">
-<div class="sourceCode" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> evaluate_points(<span class="va">self</span>):</span>
-<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="bu">len</span>(<span class="va">self</span>.p1) <span class="op">==</span> <span class="dv">1</span>:</span>
-<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span> [Felt(<span class="dv">0</span>), <span class="va">self</span>.p1[<span class="dv">0</span>] <span class="op">*</span> <span class="va">self</span>.p2[<span class="dv">0</span>], Felt(<span class="dv">0</span>)]</span>
-<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>        half <span class="op">=</span> <span class="bu">len</span>(<span class="va">self</span>.p1) <span class="op">//</span> <span class="dv">2</span></span>
-<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>        zero, one, two <span class="op">=</span> Felt(<span class="dv">0</span>), Felt(<span class="dv">0</span>), Felt(<span class="dv">0</span>)</span>
-<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(half):</span>
-<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>            zero <span class="op">+=</span> <span class="va">self</span>.p1[i] <span class="op">*</span> <span class="va">self</span>.p2[i]</span>
-<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>            one <span class="op">+=</span> <span class="va">self</span>.p1[half <span class="op">+</span> i] <span class="op">*</span> <span class="va">self</span>.p2[half <span class="op">+</span> i]</span>
-<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>            two <span class="op">+=</span> (Felt(<span class="dv">2</span>) <span class="op">*</span> <span class="va">self</span>.p1[half <span class="op">+</span> i] <span class="op">-</span> <span class="va">self</span>.p1[i]) <span class="op">*</span> (</span>
-<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>                Felt(<span class="dv">2</span>) <span class="op">*</span> <span class="va">self</span>.p2[half <span class="op">+</span> i] <span class="op">-</span> <span class="va">self</span>.p2[i]</span>
-<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>            )</span>
-<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> [zero, one, two]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell" data-execution_count="22">
+<div class="cell-output cell-output-display" data-execution_count="22">
+<div class="sourceCode" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> execute_round(<span class="va">self</span>, r):</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.rs.append(r)</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>        half <span class="op">=</span> <span class="bu">len</span>(<span class="va">self</span>.p1) <span class="op">//</span> <span class="dv">2</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.p1 <span class="op">=</span> [</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>            (Felt(<span class="dv">1</span>) <span class="op">-</span> r) <span class="op">*</span> a <span class="op">+</span> r <span class="op">*</span> b <span class="cf">for</span> (a, b) <span class="kw">in</span> <span class="bu">zip</span>(<span class="va">self</span>.p1[:half], <span class="va">self</span>.p1[half:])</span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>        ]</span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.p2 <span class="op">=</span> [</span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>            (Felt(<span class="dv">1</span>) <span class="op">-</span> r) <span class="op">*</span> a <span class="op">+</span> r <span class="op">*</span> b <span class="cf">for</span> (a, b) <span class="kw">in</span> <span class="bu">zip</span>(<span class="va">self</span>.p2[:half], <span class="va">self</span>.p2[half:])</span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>        ]</span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.transcript.write_evaluations(<span class="va">self</span>.evaluate_points())</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </div>
 <p>Since the product of 2 multilinear polynomials will be quadratic (degree 2), we can specify <span class="math inline">\(S_i\)</span> it by sending 3 points to the Verifier. Thaler gives us a way to do this in a single pass by using the fact that the leading bit will be <span class="math inline">\(0\)</span> for the first half of the evaluations and <span class="math inline">\(1\)</span> for the second half. When there is only a single evaluation we handle the exception and send back the single point surrounded by zeros.</p>
@@ -357,21 +387,21 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <section id="the-verifier" class="level4">
 <h4 class="anchored" data-anchor-id="the-verifier">The Verifier</h4>
 <p>The Verifier can take these sumcheck claims and make sure the Prover is being honest by verifying round by round that the polynomial <span class="math inline">\(S_i(0)\)</span> and <span class="math inline">\(S_i(1)\)</span> sum to the correct values and that <span class="math inline">\(degree(S_i) &lt;= degree(g)\)</span>. We implemented the verifier to verify the entire fiat-shamir transcript at once.</p>
-<div class="cell" data-execution_count="8">
-<div class="cell-output cell-output-display" data-execution_count="8">
-<div class="sourceCode" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> verify(<span class="va">self</span>):</span>
-<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>        <span class="cf">assert</span> <span class="va">self</span>.transcript.<span class="bu">sum</span> <span class="op">==</span> eval_ule(</span>
-<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>            <span class="va">self</span>.transcript.evaluations[<span class="dv">0</span>], Felt(<span class="dv">0</span>)</span>
-<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>        ) <span class="op">+</span> eval_ule(<span class="va">self</span>.transcript.evaluations[<span class="dv">0</span>], Felt(<span class="dv">1</span>))</span>
-<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>        <span class="cf">assert</span> <span class="bu">len</span>(<span class="va">self</span>.transcript.evaluations[<span class="dv">0</span>]) <span class="op">&lt;=</span> <span class="va">self</span>.transcript.degree <span class="op">+</span> <span class="dv">1</span></span>
-<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(<span class="va">self</span>.transcript.rounds):</span>
-<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>            g_l <span class="op">=</span> eval_ule(<span class="va">self</span>.transcript.evaluations[i], <span class="va">self</span>.transcript.randoms[i])</span>
-<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>            <span class="cf">assert</span> <span class="bu">len</span>(<span class="va">self</span>.transcript.evaluations[i <span class="op">+</span> <span class="dv">1</span>]) <span class="op">&lt;=</span> <span class="va">self</span>.transcript.degree <span class="op">+</span> <span class="dv">1</span></span>
-<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>            g_r <span class="op">=</span> eval_ule(<span class="va">self</span>.transcript.evaluations[i <span class="op">+</span> <span class="dv">1</span>], Felt(<span class="dv">0</span>)) <span class="op">+</span> eval_ule(</span>
-<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>                <span class="va">self</span>.transcript.evaluations[i <span class="op">+</span> <span class="dv">1</span>], Felt(<span class="dv">1</span>)</span>
-<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>            )</span>
-<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>            <span class="cf">assert</span> g_l <span class="op">==</span> g_r</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell" data-execution_count="23">
+<div class="cell-output cell-output-display" data-execution_count="23">
+<div class="sourceCode" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> verify(<span class="va">self</span>):</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>        <span class="cf">assert</span> <span class="va">self</span>.transcript.<span class="bu">sum</span> <span class="op">==</span> eval_ule(</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>            <span class="va">self</span>.transcript.evaluations[<span class="dv">0</span>], Felt(<span class="dv">0</span>)</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>        ) <span class="op">+</span> eval_ule(<span class="va">self</span>.transcript.evaluations[<span class="dv">0</span>], Felt(<span class="dv">1</span>))</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>        <span class="cf">assert</span> <span class="bu">len</span>(<span class="va">self</span>.transcript.evaluations[<span class="dv">0</span>]) <span class="op">&lt;=</span> <span class="va">self</span>.transcript.degree <span class="op">+</span> <span class="dv">1</span></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(<span class="va">self</span>.transcript.rounds<span class="op">-</span><span class="dv">1</span>):</span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>            g_l <span class="op">=</span> eval_ule(<span class="va">self</span>.transcript.evaluations[i], <span class="va">self</span>.transcript.randoms[i])</span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>            <span class="cf">assert</span> <span class="bu">len</span>(<span class="va">self</span>.transcript.evaluations[i <span class="op">+</span> <span class="dv">1</span>]) <span class="op">&lt;=</span> <span class="va">self</span>.transcript.degree <span class="op">+</span> <span class="dv">1</span></span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>            g_r <span class="op">=</span> eval_ule(<span class="va">self</span>.transcript.evaluations[i <span class="op">+</span> <span class="dv">1</span>], Felt(<span class="dv">0</span>)) <span class="op">+</span> eval_ule(</span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>                <span class="va">self</span>.transcript.evaluations[i <span class="op">+</span> <span class="dv">1</span>], Felt(<span class="dv">1</span>)</span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a>            )</span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a>            <span class="cf">assert</span> g_l <span class="op">==</span> g_r</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </div>
 <p>At the end of Sumcheck Protocol, the Verifier must also evaluate an oracle of <span class="math inline">\(g(r_1..r_{log(n)})\)</span> to complete the verification, but many times how this is done is dependent on the larger protocol so we left it out of the scope of this Verifier.</p>
@@ -383,72 +413,72 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <section id="the-calculation" class="level4">
 <h4 class="anchored" data-anchor-id="the-calculation">The Calculation</h4>
 <p>Let’s calculate the number of triangles in a square that is bisected by a line to form 2 triangles.</p>
-<div class="cell">
+<div class="cell" data-execution_count="24">
 <details>
 <summary>Graph definition</summary>
-<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Graph(<span class="bu">dict</span>):</span>
-<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>, graph):</span>
-<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>        <span class="bu">super</span>().<span class="fu">__init__</span>(graph)</span>
-<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> toAdjacencyMatrix(<span class="va">self</span>):</span>
-<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>        n <span class="op">=</span> <span class="bu">len</span>(<span class="va">self</span>)</span>
-<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>        matrix <span class="op">=</span> [[<span class="dv">0</span>] <span class="op">*</span> n <span class="cf">for</span> _ <span class="kw">in</span> <span class="bu">range</span>(n)]</span>
-<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(n):</span>
-<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>            <span class="cf">for</span> j <span class="kw">in</span> <span class="bu">range</span>(n):</span>
-<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>                matrix[i][j] <span class="op">=</span> (</span>
-<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>                    <span class="dv">1</span> <span class="cf">if</span> j <span class="kw">in</span> <span class="va">self</span>[i] <span class="cf">else</span> <span class="dv">0</span></span>
-<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a>                )</span>
-<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> matrix</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Graph(<span class="bu">dict</span>):</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>, graph):</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>        <span class="bu">super</span>().<span class="fu">__init__</span>(graph)</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> toAdjacencyMatrix(<span class="va">self</span>):</span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>        n <span class="op">=</span> <span class="bu">len</span>(<span class="va">self</span>)</span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>        matrix <span class="op">=</span> [[<span class="dv">0</span>] <span class="op">*</span> n <span class="cf">for</span> _ <span class="kw">in</span> <span class="bu">range</span>(n)]</span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(n):</span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>            <span class="cf">for</span> j <span class="kw">in</span> <span class="bu">range</span>(n):</span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>                matrix[i][j] <span class="op">=</span> (</span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a>                    <span class="dv">1</span> <span class="cf">if</span> j <span class="kw">in</span> <span class="va">self</span>[i] <span class="cf">else</span> <span class="dv">0</span></span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a>                )</span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> matrix</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 </div>
-<div class="sourceCode" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>g <span class="op">=</span> Graph({<span class="dv">0</span>: {<span class="dv">1</span>, <span class="dv">2</span>}, <span class="dv">1</span>: {<span class="dv">2</span>, <span class="dv">0</span>, <span class="dv">3</span>}, <span class="dv">2</span>: {<span class="dv">0</span>, <span class="dv">1</span>, <span class="dv">3</span>}, <span class="dv">3</span>: {<span class="dv">2</span>, <span class="dv">1</span>}})</span>
-<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>a <span class="op">=</span> g.toAdjacencyMatrix()</span>
-<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>n <span class="op">=</span> <span class="bu">len</span>(a)</span>
-<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>a2 <span class="op">=</span> [[<span class="dv">0</span>] <span class="op">*</span> n <span class="cf">for</span> _ <span class="kw">in</span> <span class="bu">range</span>(n)]</span>
-<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(n):</span>
-<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> j <span class="kw">in</span> <span class="bu">range</span>(n):</span>
-<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> k <span class="kw">in</span> <span class="bu">range</span>(n):</span>
-<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a>            a2[i][j] <span class="op">+=</span> a[i][k] <span class="op">*</span> a[k][j]</span>
-<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a>c <span class="op">=</span> <span class="dv">0</span></span>
-<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(n):</span>
-<span id="cb10-16"><a href="#cb10-16" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> j <span class="kw">in</span> <span class="bu">range</span>(n):</span>
-<span id="cb10-17"><a href="#cb10-17" aria-hidden="true" tabindex="-1"></a>        c <span class="op">+=</span> a[i][j] <span class="op">*</span> a2[i][j]</span>
-<span id="cb10-18"><a href="#cb10-18" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-19"><a href="#cb10-19" aria-hidden="true" tabindex="-1"></a>c <span class="op">//</span> <span class="dv">6</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>g <span class="op">=</span> Graph({<span class="dv">0</span>: {<span class="dv">1</span>, <span class="dv">2</span>}, <span class="dv">1</span>: {<span class="dv">2</span>, <span class="dv">0</span>, <span class="dv">3</span>}, <span class="dv">2</span>: {<span class="dv">0</span>, <span class="dv">1</span>, <span class="dv">3</span>}, <span class="dv">3</span>: {<span class="dv">2</span>, <span class="dv">1</span>}})</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>a <span class="op">=</span> g.toAdjacencyMatrix()</span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>n <span class="op">=</span> <span class="bu">len</span>(a)</span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>a2 <span class="op">=</span> [[<span class="dv">0</span>] <span class="op">*</span> n <span class="cf">for</span> _ <span class="kw">in</span> <span class="bu">range</span>(n)]</span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(n):</span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> j <span class="kw">in</span> <span class="bu">range</span>(n):</span>
+<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> k <span class="kw">in</span> <span class="bu">range</span>(n):</span>
+<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a>            a2[i][j] <span class="op">+=</span> a[i][k] <span class="op">*</span> a[k][j]</span>
+<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a>c <span class="op">=</span> <span class="dv">0</span></span>
+<span id="cb11-14"><a href="#cb11-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-15"><a href="#cb11-15" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(n):</span>
+<span id="cb11-16"><a href="#cb11-16" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> j <span class="kw">in</span> <span class="bu">range</span>(n):</span>
+<span id="cb11-17"><a href="#cb11-17" aria-hidden="true" tabindex="-1"></a>        c <span class="op">+=</span> a[i][j] <span class="op">*</span> a2[i][j]</span>
+<span id="cb11-18"><a href="#cb11-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-19"><a href="#cb11-19" aria-hidden="true" tabindex="-1"></a>c <span class="op">//</span> <span class="dv">6</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </section>
 <section id="the-prover" class="level4">
 <h4 class="anchored" data-anchor-id="the-prover">The Prover</h4>
 <p>The Prover already had to compute <span class="math inline">\(\tilde{a}^2\)</span> and <span class="math inline">\(\tilde{a}\)</span> as part of its normal computation. We can use these values to compute a proof as well thanks to Sumcheck and the MatMult Protocol. We initiate the Counting Triangles Proof using these values along with <span class="math inline">\(c\)</span>.</p>
-<div class="cell" data-execution_count="9">
-<div class="cell-output cell-output-display" data-execution_count="9">
-<div class="sourceCode" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> TriangleProver:</span>
-<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>, a, a2, c):</span>
-<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.a <span class="op">=</span> a</span>
-<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.a2 <span class="op">=</span> a2</span>
-<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.c <span class="op">=</span> c</span>
-<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.logn <span class="op">=</span> <span class="bu">int</span>(log2(<span class="bu">len</span>(<span class="va">self</span>.a)))</span>
-<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.transcript <span class="op">=</span> TrianglesTranscript()</span>
-<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.transcript.write_a(<span class="va">self</span>.a)</span>
-<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell" data-execution_count="25">
+<div class="cell-output cell-output-display" data-execution_count="25">
+<div class="sourceCode" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> TriangleProver:</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>, a, a2, c):</span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.a <span class="op">=</span> a</span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.a2 <span class="op">=</span> a2</span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.c <span class="op">=</span> c</span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.logn <span class="op">=</span> <span class="bu">int</span>(log2(<span class="bu">len</span>(<span class="va">self</span>.a)))</span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.transcript <span class="op">=</span> TrianglesTranscript()</span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.transcript.write_a(<span class="va">self</span>.a)</span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </div>
 <p>Now we have to proove <span class="math inline">\(\tilde{a}^2 * \tilde{a}\)</span> as the first phase of the protocol. We instantiate sumcheck and create a proof to add to the Counting Triangles transcript.</p>
-<div class="cell" data-execution_count="10">
-<div class="cell-output cell-output-display" data-execution_count="10">
-<div class="sourceCode" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> prove(<span class="va">self</span>):</span>
-<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>        p1 <span class="op">=</span> SumcheckProver(</span>
-<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>            <span class="va">self</span>.a2,</span>
-<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>            <span class="va">self</span>.a,</span>
-<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>            <span class="va">self</span>.c,</span>
-<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>            <span class="va">self</span>.transcript.hashchain.copy(),</span>
-<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>        )</span>
-<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>        p1.prove()</span>
-<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.transcript.add_transcript(p1.transcript)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell" data-execution_count="26">
+<div class="cell-output cell-output-display" data-execution_count="26">
+<div class="sourceCode" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> prove(<span class="va">self</span>):</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>        p1 <span class="op">=</span> SumcheckProver(</span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>            <span class="va">self</span>.a2,</span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>            <span class="va">self</span>.a,</span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>            <span class="va">self</span>.c,</span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>            <span class="va">self</span>.transcript.hashchain.copy(),</span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>        )</span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>        p1.prove()</span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.transcript.add_transcript(p1.transcript)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </div>
 <div class="callout-note callout callout-style-default callout-captioned">
@@ -465,21 +495,21 @@ Note
 </div>
 </div>
 <p>Now that we have proved that computation, Thaler explains that we need to also prove that the <span class="math inline">\(a^2\)</span> matrix was calculated correctly before we can make the final verification assertions. To do this, we run the MatMult IP.</p>
-<div class="cell" data-execution_count="11">
-<div class="cell-output cell-output-display" data-execution_count="11">
-<div class="sourceCode" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>        rands <span class="op">=</span> p1.transcript.randoms</span>
-<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>        (i, j) <span class="op">=</span> (rands[: <span class="bu">len</span>(rands) <span class="op">//</span> <span class="dv">2</span>], rands[<span class="bu">len</span>(rands) <span class="op">//</span> <span class="dv">2</span> :])</span>
-<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>        p2 <span class="op">=</span> SumcheckProver(</span>
-<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>            [eval_mle(<span class="va">self</span>.a, i <span class="op">+</span> hc) <span class="cf">for</span> hc <span class="kw">in</span> hypercube(<span class="va">self</span>.logn <span class="op">//</span> <span class="dv">2</span>)],</span>
-<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>            [eval_mle(<span class="va">self</span>.a, hc <span class="op">+</span> j) <span class="cf">for</span> hc <span class="kw">in</span> hypercube(<span class="va">self</span>.logn <span class="op">//</span> <span class="dv">2</span>)],</span>
-<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>            eval_mle(<span class="va">self</span>.a2, i <span class="op">+</span> j),</span>
-<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a>            p1.transcript.hashchain.copy(),</span>
-<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a>        )</span>
-<span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a>        p2.prove()</span>
-<span id="cb13-12"><a href="#cb13-12" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.transcript.add_transcript(p2.transcript)</span>
-<span id="cb13-13"><a href="#cb13-13" aria-hidden="true" tabindex="-1"></a></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell" data-execution_count="27">
+<div class="cell-output cell-output-display" data-execution_count="27">
+<div class="sourceCode" id="cb14"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>        rands <span class="op">=</span> p1.transcript.randoms</span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>        (i, j) <span class="op">=</span> (rands[: <span class="bu">len</span>(rands) <span class="op">//</span> <span class="dv">2</span>], rands[<span class="bu">len</span>(rands) <span class="op">//</span> <span class="dv">2</span> :])</span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>        p2 <span class="op">=</span> SumcheckProver(</span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>            [eval_mle(<span class="va">self</span>.a, i <span class="op">+</span> hc) <span class="cf">for</span> hc <span class="kw">in</span> hypercube(<span class="va">self</span>.logn <span class="op">//</span> <span class="dv">2</span>)],</span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a>            [eval_mle(<span class="va">self</span>.a, hc <span class="op">+</span> j) <span class="cf">for</span> hc <span class="kw">in</span> hypercube(<span class="va">self</span>.logn <span class="op">//</span> <span class="dv">2</span>)],</span>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a>            eval_mle(<span class="va">self</span>.a2, i <span class="op">+</span> j),</span>
+<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a>            p1.transcript.hashchain.copy(),</span>
+<span id="cb14-10"><a href="#cb14-10" aria-hidden="true" tabindex="-1"></a>        )</span>
+<span id="cb14-11"><a href="#cb14-11" aria-hidden="true" tabindex="-1"></a>        p2.prove()</span>
+<span id="cb14-12"><a href="#cb14-12" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.transcript.add_transcript(p2.transcript)</span>
+<span id="cb14-13"><a href="#cb14-13" aria-hidden="true" tabindex="-1"></a></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </div>
 <p>We take the <span class="math inline">\(r\)</span>s that the prover commited to in the first round of Sumcheck and set them to <span class="math inline">\(i\)</span> and <span class="math inline">\(j\)</span>. Notice that we connot just pass in evaluations as-is like we did in the first Sumcheck instance. The MatMult IP is defined by: <span class="math display">\[fc(i,j)=∑{k\in{\{0,1\}}} ^{log(n)} fa(i,k)·fb(k,j)\]</span> Here, <span class="math inline">\(\tilde{a}\)</span> is eqaul to <span class="math inline">\(fa\)</span> and <span class="math inline">\(fb\)</span> and we are summing up on the hypercube in order to instantiate a SumCheck instance that forces the Prover to commit to <span class="math inline">\(k\)</span>.</p>
@@ -488,34 +518,34 @@ Note
 <section id="the-useful-subroutine" class="level4">
 <h4 class="anchored" data-anchor-id="the-useful-subroutine">The Useful Subroutine</h4>
 <p>Thaler describes a useful subroutine which allows work to be offloaded from the Verifier to the Prover. Let declare <span class="math inline">\(\ell\)</span> as the line going through points <span class="math inline">\(\tilde{W}(a)\)</span>, <span class="math inline">\(\tilde{W}(b)\)</span>, and <span class="math inline">\(\tilde{W}(c)\)</span>. By making the Prover specify a polynomial <span class="math inline">\(\tilde{W}\)</span> constrained to <span class="math inline">\(\ell\)</span>, the verifier can prove the validity of <span class="math inline">\(\tilde{W}(a)\)</span>, <span class="math inline">\(\tilde{W}(b)\)</span>, and <span class="math inline">\(\tilde{W}(c)\)</span> by evaluating <span class="math inline">\(\tilde{W} \circ \ell\)</span> (aka <span class="math inline">\(q\)</span>) at a single random point <span class="math inline">\(r\)</span>. In our case, <span class="math inline">\(\tilde{a}\)</span> is <span class="math inline">\(\tilde{W}\)</span> so we will continue with <span class="math inline">\(\tilde{W}\)</span> for clarity.</p>
-<div class="cell" data-execution_count="12">
-<div class="cell-output cell-output-display" data-execution_count="12">
-<div class="sourceCode" id="cb14"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> line_subroutine(<span class="va">self</span>, a, b, c):</span>
-<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>        ts <span class="op">=</span> <span class="bu">list</span>(<span class="bu">zip</span>(a, b, c))</span>
-<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>        w <span class="op">=</span> <span class="va">self</span>.a</span>
-<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>        q <span class="op">=</span> [</span>
-<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>            eval_mle(w, [eval_ule(t, Felt(i)) <span class="cf">for</span> t <span class="kw">in</span> ts])</span>
-<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>            <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">0</span>, <span class="dv">2</span> <span class="op">*</span> <span class="va">self</span>.logn <span class="op">+</span> <span class="dv">1</span>)</span>
-<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a>        ]</span>
-<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> q</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell" data-execution_count="28">
+<div class="cell-output cell-output-display" data-execution_count="28">
+<div class="sourceCode" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> line_subroutine(<span class="va">self</span>, a, b, c):</span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>        ts <span class="op">=</span> <span class="bu">list</span>(<span class="bu">zip</span>(a, b, c))</span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>        w <span class="op">=</span> <span class="va">self</span>.a</span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>        q <span class="op">=</span> [</span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>            eval_mle(w, [eval_ule(t, Felt(i)) <span class="cf">for</span> t <span class="kw">in</span> ts])</span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>            <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">0</span>, <span class="dv">2</span> <span class="op">*</span> <span class="va">self</span>.logn <span class="op">+</span> <span class="dv">1</span>)</span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a>        ]</span>
+<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> q</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </div>
 <p>In order to specify the polynomial <span class="math inline">\(q\)</span>, the Prover must send <span class="math inline">\(2 * log(n) + 1\)</span> points to the Verifier. An optimization in this implementation is the fact that we already know that <span class="math inline">\(q(0)\)</span>, <span class="math inline">\(q(1)\)</span>, and <span class="math inline">\(q(2)\)</span> are equal to <span class="math inline">\(\tilde{W}(a)\)</span>, <span class="math inline">\(\tilde{W}(b)\)</span>, and <span class="math inline">\(\tilde{W}(c)\)</span>. The remaining points can calculated by evaluating <span class="math inline">\(\tilde{W}\)</span> at the polynomial <span class="math inline">\(t_i\)</span> where <span class="math inline">\(t_i\)</span> equals the line defined by <span class="math inline">\(t_i(0)=a_i\)</span>, <span class="math inline">\(t_i(1)=b_i\)</span>, and <span class="math inline">\(t_i(2)=c_i\)</span>. We can easily calulate all <span class="math inline">\(t_i\)</span> by zipping together <span class="math inline">\(a\)</span>, <span class="math inline">\(b\)</span>, and <span class="math inline">\(c\)</span> then viewing each entry as polynomial specified by a low degree extension.</p>
-<div class="cell" data-execution_count="13">
-<div class="cell-output cell-output-display" data-execution_count="13">
-<div class="sourceCode" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>        w <span class="op">=</span> <span class="va">self</span>.transcript.a</span>
-<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>        wa <span class="op">=</span> eval_ule(q, Felt(<span class="dv">0</span>))</span>
-<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>        wb <span class="op">=</span> eval_ule(q, Felt(<span class="dv">1</span>))</span>
-<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>        wc <span class="op">=</span> eval_ule(q, Felt(<span class="dv">2</span>))</span>
-<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a>        ra <span class="op">=</span> Felt.random()</span>
-<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a>        ts <span class="op">=</span> <span class="bu">list</span>(<span class="bu">zip</span>(i <span class="op">+</span> j, k <span class="op">+</span> j, i <span class="op">+</span> k))</span>
-<span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a>        r <span class="op">=</span> [eval_ule(t, ra) <span class="cf">for</span> t <span class="kw">in</span> ts]</span>
-<span id="cb15-10"><a href="#cb15-10" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb15-11"><a href="#cb15-11" aria-hidden="true" tabindex="-1"></a>        <span class="cf">assert</span> <span class="bu">len</span>(q) <span class="op">&lt;=</span> <span class="dv">2</span> <span class="op">*</span> <span class="bu">len</span>(i <span class="op">+</span> j) <span class="op">+</span> <span class="dv">1</span></span>
-<span id="cb15-12"><a href="#cb15-12" aria-hidden="true" tabindex="-1"></a>        <span class="cf">assert</span> eval_ule(q, ra) <span class="op">==</span> eval_mle(w, r)</span>
-<span id="cb15-13"><a href="#cb15-13" aria-hidden="true" tabindex="-1"></a></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell" data-execution_count="32">
+<div class="cell-output cell-output-display" data-execution_count="32">
+<div class="sourceCode" id="cb16"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>        w <span class="op">=</span> <span class="va">self</span>.transcript.a</span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>        wa <span class="op">=</span> eval_ule(q, Felt(<span class="dv">0</span>))</span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>        wb <span class="op">=</span> eval_ule(q, Felt(<span class="dv">1</span>))</span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>        wc <span class="op">=</span> eval_ule(q, Felt(<span class="dv">2</span>))</span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>        ra <span class="op">=</span> Felt.random()</span>
+<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a>        ts <span class="op">=</span> <span class="bu">list</span>(<span class="bu">zip</span>(i <span class="op">+</span> j, k <span class="op">+</span> j, i <span class="op">+</span> k))</span>
+<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a>        r <span class="op">=</span> [eval_ule(t, ra) <span class="cf">for</span> t <span class="kw">in</span> ts]</span>
+<span id="cb16-10"><a href="#cb16-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-11"><a href="#cb16-11" aria-hidden="true" tabindex="-1"></a>        <span class="cf">assert</span> <span class="bu">len</span>(q) <span class="op">&lt;=</span> <span class="dv">2</span> <span class="op">*</span> <span class="bu">len</span>(i <span class="op">+</span> j) <span class="op">+</span> <span class="dv">1</span></span>
+<span id="cb16-12"><a href="#cb16-12" aria-hidden="true" tabindex="-1"></a>        <span class="cf">assert</span> eval_ule(q, ra) <span class="op">==</span> eval_mle(w, r)</span>
+<span id="cb16-13"><a href="#cb16-13" aria-hidden="true" tabindex="-1"></a></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </div>
 <p>The Verifier needs <span class="math inline">\(\tilde{W}(a)\)</span>, <span class="math inline">\(\tilde{W}(b)\)</span>, and <span class="math inline">\(\tilde{W}(c)\)</span> in order to perform the last verification step of the Counting Triangles IP. By recieving <span class="math inline">\(q\)</span> from the Prover, the Verifier knows that it recieved those values as <span class="math inline">\(q(0)\)</span>, <span class="math inline">\(q(1)\)</span>, and <span class="math inline">\(q(2)\)</span>. To be convinced that the values that she recieved were correct, the verifier picks a random field element <span class="math inline">\(r*\)</span> (<code>ra</code> in the source code), and uses it to create a point <span class="math inline">\(r\)</span> that is on line <span class="math inline">\(\ell\)</span>. The Verifier is convinced of <span class="math inline">\(\tilde{W}(a)\)</span>, <span class="math inline">\(\tilde{W}(b)\)</span>, and <span class="math inline">\(\tilde{W}(c)\)</span> if <span class="math inline">\(q\)</span> is a maximum degree of <span class="math inline">\(2 * log(n)\)</span> and if <span class="math inline">\(q(r*) == \tilde{W}(r)\)</span>.</p>
@@ -523,20 +553,21 @@ Note
 <section id="the-final-assertion" class="level4">
 <h4 class="anchored" data-anchor-id="the-final-assertion">The Final Assertion</h4>
 <p>Now that we have forced the Prover to give us the values we need with little additional work, we can complete the verification.</p>
-<div class="cell" data-execution_count="14">
-<div class="cell-output cell-output-display" data-execution_count="14">
-<div class="sourceCode" id="cb16"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>        <span class="cf">assert</span> wa <span class="op">*</span> claimed_a2 <span class="op">==</span> (</span>
-<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>            eval_ule(prover1_round_k, Felt(<span class="dv">0</span>)) <span class="op">+</span> eval_ule(prover1_round_k, Felt(<span class="dv">1</span>))</span>
-<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>        )</span>
-<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>        <span class="cf">assert</span> wb <span class="op">*</span> wc <span class="op">==</span> (</span>
-<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>            eval_ule(prover2_round_k, Felt(<span class="dv">0</span>)) <span class="op">+</span> eval_ule(prover2_round_k, Felt(<span class="dv">1</span>))</span>
-<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>        )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell" data-execution_count="34">
+<div class="cell-output cell-output-display" data-execution_count="34">
+<div class="sourceCode" id="cb17"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>        <span class="cf">assert</span> wa <span class="op">*</span> claimed_a2 <span class="op">==</span> eval_ule(prover1_round_gv, prover1_round_v)</span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>        <span class="cf">assert</span> wb <span class="op">*</span> wc <span class="op">==</span> eval_ule(prover2_round_gv, prover2_round_v)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </div>
 <p>We make sure that the values that are claimed in the final round of each instance of Sumcheck align with what we now know about <span class="math inline">\(\tilde{W}(a)\)</span>, <span class="math inline">\(\tilde{W}(b)\)</span>, and <span class="math inline">\(\tilde{W}(c)\)</span>.</p>
-
-
 </section>
+</section>
+<section id="links" class="level2">
+<h2 class="anchored" data-anchor-id="links">Links</h2>
+<p><a href="https://github.com/timgestson/proofs-args-and-zk">Source Code</a></p>
+<p><a href="https://people.cs.georgetown.edu/jthaler/ProofsArgsAndZK.pdf">Proofs, Arguments, and Zero-Knowledge by Justin Thaler</a></p>
+
+
 </section>
 
 </main> <!-- /main -->
