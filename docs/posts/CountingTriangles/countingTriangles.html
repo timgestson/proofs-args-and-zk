@@ -179,7 +179,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <section id="multivariate-sumcheck" class="level2">
 <h2 class="anchored" data-anchor-id="multivariate-sumcheck">Multivariate Sumcheck</h2>
 <p><em>A breakdown of its efficient implementation</em></p>
-<p>Sumcheck is introduced in Chapter 4 of <a href="https://people.cs.georgetown.edu/jthaler/ProofsArgsAndZK.pdf">Proofs, Arguments, and Zero-Knowledge</a> as a core building block of Interactive Proofs. The chapter outlines the power and versatility of Sumcheck, a tool Thaler describes as “the hammer” that makes many Interactive Proof problems look like a nail. Included, are details of how Sumcheck can be used to prove the computation of <strong>counting triangles in a graph</strong> with little additional work. This is a rare class of proof is considered “Super-Efficient” due to the cost profile of the Prover and Verifier. In this post, we implement the IP and break down <a href="https://github.com/timgestson/proofs-args-and-zk">the code</a>.</p>
+<p>Sumcheck is introduced in Chapter 4 of <a href="https://people.cs.georgetown.edu/jthaler/ProofsArgsAndZK.pdf">Proofs, Arguments, and Zero-Knowledge</a> as a core building block of interactive proofs. The chapter outlines the power and versatility of Sumcheck, a tool Thaler describes as “the hammer” that makes many interactive proof problems look like a nail. Included, are details of how Sumcheck can be used to prove the computation of <strong>counting triangles in a graph</strong> with little additional work. This is a rare class of proof is considered “Super-Efficient” due to the lean cost profile of the Prover and Verifier. In this post, we implement the IP and break down <a href="https://github.com/timgestson/proofs-args-and-zk">the code</a>.</p>
 <div class="callout-warning callout callout-style-default callout-captioned">
 <div class="callout-header d-flex align-content-center">
 <div class="callout-icon-container">
@@ -190,14 +190,14 @@ Warning
 </div>
 </div>
 <div class="callout-body-container callout-body">
-<p>This will not go into much detail compared to Proofs, Arguments, and Zero-Knowledge. Read chapters 1-4 to be introduced to the subject matter.</p>
+<p>This will not go into as much detail as Proofs, Arguments, and Zero-Knowledge. Read chapters 1-4 to be introduced to the subject matter.</p>
 </div>
 </div>
 <section id="the-building-blocks" class="level3">
 <h3 class="anchored" data-anchor-id="the-building-blocks">The Building Blocks</h3>
 <section id="finite-fields" class="level4">
 <h4 class="anchored" data-anchor-id="finite-fields">Finite Fields</h4>
-<p>All of the Math in Interactive Proofs and SNARKs happen over a finite field. Here, we define a very simple finite field size <span class="math inline">\(2^{61}\)</span> for this example. We will refer to elements of that field as <code>Felt</code> which is an abbreviation for Field Element.</p>
+<p>All of the math in interactive proofs happen over a finite field. Here, we define a very simple finite field size <span class="math inline">\(2^{61}\)</span> for this example. We will refer to elements of that field as <code>Felt</code> which is an abbreviation for Field Element.</p>
 <div class="cell" data-execution_count="2">
 <details>
 <summary>Finite Field Element</summary>
@@ -349,9 +349,15 @@ Warning
 </section>
 <section id="sumcheck" class="level2">
 <h2 class="anchored" data-anchor-id="sumcheck">Sumcheck</h2>
+<section id="high-level-overview" class="level4">
+<h4 class="anchored" data-anchor-id="high-level-overview">High Level Overview</h4>
+<p>Sumcheck is a procedure where the Prover commits to the sum of a polynomial’s evaluations over the boolean hypercube. Each round, the Prover is forced to fix a variable of the multivariate polynomial with a random field element <span class="math inline">\(r\)</span> provided by the Verifier.</p>
+<p><span class="math display">\[g_j(i) = \sum_{(x_{j+1},...,x_v )∈\{0,1\}^{v−j}}  g(r_1,...,r_{j−1},i,x_{j+1},...,x_v)\]</span></p>
+<p>At the start of each round, the Prover sums up the unfixed variables over the boolean hypercube to come up with <span class="math inline">\(S_i\)</span>, a polynomial that can be used by the Verifier to check the integrity of the Prover’s actions. By the end of the protocol, the Verifier can be convinced that the polynomial did indeed sum to the claimed value, by comparing <span class="math inline">\(g(r_1,...r_v)\)</span> to the <span class="math inline">\(S_v(r_v)\)</span>.</p>
+</section>
 <section id="the-efficient-prover" class="level4">
 <h4 class="anchored" data-anchor-id="the-efficient-prover">The Efficient Prover</h4>
-<p>When the sumcheck polynomial <span class="math inline">\(g\)</span> is made up of the product of many different multilinear polynomials (in the form of <span class="math inline">\(g = p_1 * p_2 ... p_k\)</span>), the prover can take advantage of a huge optimizations. The evaluations of <span class="math inline">\(p_i\)</span> can be stored separately in the Prover’s internal data structure. Our implementation covers the scenario for when <span class="math inline">\(g = p_1 * p_2\)</span> because that is all that is needed for counting triangles.</p>
+<p>When the Sumcheck polynomial <span class="math inline">\(g\)</span> is made up of the product of many different multilinear polynomials (in the form of <span class="math inline">\(g = p_1 * p_2 ... p_k\)</span>), the prover can take advantage of a huge optimizations. The evaluations of <span class="math inline">\(p_i\)</span> can be stored separately in the Prover’s internal data structure. Our implementation covers the scenario for when <span class="math inline">\(g = p_1 * p_2\)</span> because that is all that is needed for counting triangles.</p>
 <div class="cell" data-execution_count="7">
 <div class="cell-output cell-output-display" data-execution_count="7">
 <div class="sourceCode" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> SumcheckProver:</span>
@@ -365,14 +371,14 @@ Warning
 <span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.rs <span class="op">=</span> []</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </div>
-<p>We start the Prover by storing the evaluations of <span class="math inline">\(p_1\)</span> and <span class="math inline">\(p_2\)</span>. Each round we can half the data structure leveraging <em>Leema 3.8</em>’s <span class="math display">\[p(x_1,x_2,...,x_l) = x_1 · p(1,x_2,...,x_l)+(1−x_1)· p(0,x_2,...,x_l)\]</span> Below is a visual from the book.</p>
+<p>We start the Prover by storing the evaluations of <span class="math inline">\(p_1\)</span> and <span class="math inline">\(p_2\)</span>. Each round we can half the data structure leveraging <strong>Leema 3.8</strong>’s <span class="math display">\[p(x_1,x_2,...,x_l) = x_1 · p(1,x_2,...,x_l)+(1−x_1)· p(0,x_2,...,x_l)\]</span> Below is a visual from the book.</p>
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
 <p><img src="./proversDataStructure.png" class="img-fluid figure-img" style="width:80.0%"></p>
 <p></p><figcaption class="figure-caption">Source: Proofs, Arguments, and Zero-Knowledge</figcaption><p></p>
 </figure>
 </div>
-<p>The Prover now sets <span class="math inline">\(x_i\)</span> to <span class="math inline">\(r\)</span> and updates its data structure in-place. Just like in the picture, we can divide the evaluations in half and zip those together in order to get the values we need for <em>Lemma 3.8</em>.</p>
+<p>The Prover now sets <span class="math inline">\(x_i\)</span> to <span class="math inline">\(r\)</span> and updates its data structure in-place. Just like in the picture, we can divide the evaluations in half and zip those together in order to get the values we need for the calculation.</p>
 <div class="cell" data-execution_count="8">
 <div class="cell-output cell-output-display" data-execution_count="8">
 <div class="sourceCode" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> execute_round(<span class="va">self</span>, r):</span>
@@ -387,7 +393,7 @@ Warning
 <span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.transcript.write_evaluations(<span class="va">self</span>.evaluate_points())</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </div>
-<p>The power of this is that we no longer have to sum up <span class="math inline">\(x_{i+1}..x_l\)</span> on the hypercube to get the polynomial <span class="math inline">\(S_i\)</span> to send to the prover. We can take advantage of the properties of the multilinear polynomial in order to save the Prover significant time.</p>
+<p>The power of this is that we no longer have to sum up <span class="math inline">\(x_{i+1}..x_l\)</span> on the hypercube to get the polynomial <span class="math inline">\(S_i\)</span> to send to the Prover. We can take advantage of the properties of the multilinear polynomial in order to save the Prover significant time.</p>
 <div class="cell" data-execution_count="9">
 <div class="cell-output cell-output-display" data-execution_count="9">
 <div class="sourceCode" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> evaluate_points(<span class="va">self</span>):</span>
@@ -402,12 +408,12 @@ Warning
 <span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> [zero, one, two]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </div>
-<p>Since the product of 2 multilinear polynomials will be quadratic (degree 2), we can specify <span class="math inline">\(S_i\)</span> it by sending 3 points to the Verifier. Thaler gives us a way to do this in a single pass by using the fact that the leading bit will be <span class="math inline">\(0\)</span> for the first half of the evaluations and <span class="math inline">\(1\)</span> for the second half.</p>
-<p>To get <span class="math inline">\(S_i(2)\)</span>, we leverage Equation 4.13 <span class="math display">\[h(r_1,...,r_{i−1},2,b_{i+1},...,b_l) = 2·h(r_1,...,r_{i−1},1,b_{i+1},...,b_l)−h(r_1,...,r_{i−1},0,b_{i+1},...,b_l)\]</span> We take this opportunity to multiply the <span class="math inline">\(p_1\)</span> and <span class="math inline">\(p_2\)</span> together in order to provide the correct <span class="math inline">\(S_i\)</span> to the Verifier.</p>
+<p>Since the product of 2 multilinear polynomials will be quadratic (degree 2), we can specify <span class="math inline">\(S_i\)</span> by sending 3 points to the Verifier. Thaler describes a way to do this in a single pass. This is possible due to the structured nature of the hypercube evaluations and the fact that the leading bit of the hypercube will be <span class="math inline">\(0\)</span> for the first half of the evaluations and <span class="math inline">\(1\)</span> for the second half.</p>
+<p>To get <span class="math inline">\(S_i(2)\)</span>, we leverage <strong>Equation 4.13</strong> <span class="math display">\[h(r_1,...,r_{i−1},2,b_{i+1},...,b_l) = 2·h(r_1,...,r_{i−1},1,b_{i+1},...,b_l)−h(r_1,...,r_{i−1},0,b_{i+1},...,b_l)\]</span> We take this opportunity to multiply the <span class="math inline">\(p_1\)</span> and <span class="math inline">\(p_2\)</span> together in order to provide the correct <span class="math inline">\(S_i\)</span> to the Verifier.</p>
 </section>
 <section id="the-verifier" class="level4">
 <h4 class="anchored" data-anchor-id="the-verifier">The Verifier</h4>
-<p>The Verifier can take these sumcheck claims and make sure the Prover is being honest by verifying round by round that the polynomial <span class="math inline">\(S_i(0)\)</span> and <span class="math inline">\(S_i(1)\)</span> sum to the correct values and that <span class="math inline">\(degree(S_i) &lt;= degree(g)\)</span>. We implemented the verifier to verify the entire fiat-shamir transcript at once.</p>
+<p>The Verifier can take these sumcheck claims and make sure the Prover is being honest by verifying, round by round, that the polynomial <span class="math inline">\(S_i(0)\)</span> and <span class="math inline">\(S_i(1)\)</span> sum to the correct values and that <span class="math inline">\(degree(S_i) &lt;= degree(g)\)</span>. In this implementation, the Verifier verifies the all rounds of the fiat-shamir transcript at once.</p>
 <div class="cell" data-execution_count="10">
 <div class="cell-output cell-output-display" data-execution_count="10">
 <div class="sourceCode" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> verify(<span class="va">self</span>):</span>
@@ -425,12 +431,12 @@ Warning
 <span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a>            <span class="cf">assert</span> g_l <span class="op">==</span> g_r</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </div>
-<p>At the end of Sumcheck Protocol, the Verifier must also evaluate an oracle of <span class="math inline">\(g(r_1..r_{log(n)})\)</span> to complete the verification, but how and when this happens is dependent on the larger protocol so we left it out of the scope of this Verifier.</p>
+<p>At the end of Sumcheck protocol, the Verifier must also evaluate an oracle of <span class="math inline">\(g(r_1..r_{log(n)})\)</span> to complete the verification, but how and when this happens is dependent on the larger protocol so we left it out of the scope of this Verifier.</p>
 </section>
 </section>
 <section id="counting-triangles" class="level2">
 <h2 class="anchored" data-anchor-id="counting-triangles">Counting Triangles</h2>
-<p>An efficient way to caluculate the number of triangles in a graph is to take the adjacency matrix and square it, then multiply it by the adjacency matrix again and divide by 6. <span class="math display">\[Triangles = (adj^2 * adj) / 6\]</span> Using Sumcheck and the Super-Efficient IP for MatMult protocol which Thaler outlines in Section 4.4, we can Prove the calculation of the Triangle count with a small amount of extra work for the party computing the count.</p>
+<p>An efficient way to caluculate the number of triangles in a graph is to take the adjacency matrix and square it, then multiply it by the adjacency matrix again and divide by 6. <span class="math display">\[Triangles = (adj^2 * adj) / 6\]</span> Using Sumcheck and the Super-Efficient IP for MatMult protocol which Thaler outlines in <strong>Section 4.4</strong>, we can Prove the calculation of the Triangle count with a small amount of extra work.</p>
 <section id="the-calculation" class="level4">
 <h4 class="anchored" data-anchor-id="the-calculation">The Calculation</h4>
 <p>Let’s calculate the number of triangles in a square that is bisected by a line to form 2 triangles.</p>
@@ -474,7 +480,7 @@ Warning
 </section>
 <section id="the-prover" class="level4">
 <h4 class="anchored" data-anchor-id="the-prover">The Prover</h4>
-<p>The Prover already had to compute <span class="math inline">\(\tilde{a}^2\)</span> and <span class="math inline">\(\tilde{a}\)</span> as part of its normal computation. We can use these values to compute a proof as well thanks to Sumcheck and the MatMult Protocol. We initiate the Counting Triangles Proof using these values along with <span class="math inline">\(c\)</span>.</p>
+<p>Since we interpret the flattened <span class="math inline">\(a^2\)</span> and <span class="math inline">\(a\)</span> as <span class="math inline">\(\tilde{a}^2\)</span> and <span class="math inline">\(\tilde{a}\)</span> respectively, the Prover does not have to do any additional computation to begin the protocol. We can use these values to compute a proof thanks to Sumcheck and the MatMult Protocol. We initiate the Counting Triangles Proof using these values along with <span class="math inline">\(c\)</span>.</p>
 <div class="cell" data-execution_count="12">
 <div class="cell-output cell-output-display" data-execution_count="12">
 <div class="sourceCode" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> TriangleProver:</span>
@@ -488,7 +494,7 @@ Warning
 <span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </div>
-<p>Now we have to proove <span class="math inline">\(\tilde{a}^2 * \tilde{a}\)</span> as the first phase of the protocol. We instantiate sumcheck and create a proof to add to the Counting Triangles transcript.</p>
+<p>Now we have to prove <span class="math inline">\(\tilde{a}^2 * \tilde{a}\)</span> as the first phase of the protocol. We instantiate sumcheck and create a proof to add to the Counting Triangles transcript.</p>
 <div class="cell" data-execution_count="13">
 <div class="cell-output cell-output-display" data-execution_count="13">
 <div class="sourceCode" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> prove(<span class="va">self</span>):</span>
@@ -533,12 +539,12 @@ Note
 <span id="cb14-13"><a href="#cb14-13" aria-hidden="true" tabindex="-1"></a></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </div>
-<p>We take the <span class="math inline">\(r\)</span>s that the prover commited to in the first round of Sumcheck and set them to <span class="math inline">\(i\)</span> and <span class="math inline">\(j\)</span>. Notice that we connot just pass in evaluations as-is like we did in the first Sumcheck instance. The MatMult IP is defined by: <span class="math display">\[fc(i,j)=∑{k\in{\{0,1\}}} ^{log(n)} fa(i,k)·fb(k,j)\]</span> Here, <span class="math inline">\(\tilde{a}\)</span> is eqaul to <span class="math inline">\(fa\)</span> and <span class="math inline">\(fb\)</span> and we are summing up on the hypercube in order to instantiate a SumCheck instance that forces the Prover to commit to <span class="math inline">\(k\)</span>.</p>
-<p>Now that we have run sumcheck, we have <span class="math inline">\(i\)</span>, <span class="math inline">\(j\)</span>, and <span class="math inline">\(k\)</span> so we theoretically have given the Verifier enough information to prove the validity of the computation. We would just need to evaluate <span class="math inline">\(\tilde{a}(i+j)\)</span>, <span class="math inline">\(\tilde{a}(k+j)\)</span>, and <span class="math inline">\(\tilde{a}(i+k)\)</span> to complete the Verification. This is alot of work for the Verifier though and it turns out that it can instead be done by the Prover.</p>
+<p>We take the <span class="math inline">\(r\)</span>s that the prover commited to in the first round of Sumcheck and set them to <span class="math inline">\(i\)</span> and <span class="math inline">\(j\)</span>. Notice that we connot just pass in evaluations as-is like we did in the first Sumcheck instance. The MatMult IP is defined by: <span class="math display">\[fc(i,j)=∑{k\in{\{0,1\}}} ^{log(n)} fa(i,k)·fb(k,j)\]</span> Here, <span class="math inline">\(\tilde{a}\)</span> is equal to <span class="math inline">\(fa\)</span> and <span class="math inline">\(fb\)</span> and we are summing up on the hypercube in order to instantiate a Sumcheck instance that forces the Prover to commit to <span class="math inline">\(k\)</span>.</p>
+<p>Now that we have run Sumcheck, we have <span class="math inline">\(i\)</span>, <span class="math inline">\(j\)</span>, and <span class="math inline">\(k\)</span> so we theoretically have given the Verifier enough information to prove the validity of the computation. We would just need to evaluate <span class="math inline">\(\tilde{a}(i+j)\)</span>, <span class="math inline">\(\tilde{a}(k+j)\)</span>, and <span class="math inline">\(\tilde{a}(i+k)\)</span> to complete the verification. This is alot of work for the Verifier though and it turns out that it can instead be done by the Prover.</p>
 </section>
 <section id="the-useful-subroutine" class="level4">
 <h4 class="anchored" data-anchor-id="the-useful-subroutine">The Useful Subroutine</h4>
-<p>Thaler describes a useful subroutine which allows work to be offloaded from the Verifier to the Prover. Let declare <span class="math inline">\(\ell\)</span> as the line going through points <span class="math inline">\(\tilde{W}(a)\)</span>, <span class="math inline">\(\tilde{W}(b)\)</span>, and <span class="math inline">\(\tilde{W}(c)\)</span>. By making the Prover specify a polynomial <span class="math inline">\(\tilde{W}\)</span> constrained to <span class="math inline">\(\ell\)</span>, the verifier can prove the validity of <span class="math inline">\(\tilde{W}(a)\)</span>, <span class="math inline">\(\tilde{W}(b)\)</span>, and <span class="math inline">\(\tilde{W}(c)\)</span> by evaluating <span class="math inline">\(\tilde{W} \circ \ell\)</span> (aka <span class="math inline">\(q\)</span>) at a single random point <span class="math inline">\(r\)</span>. In our case, <span class="math inline">\(\tilde{a}\)</span> is <span class="math inline">\(\tilde{W}\)</span> so we will continue with <span class="math inline">\(\tilde{W}\)</span> for clarity.</p>
+<p>Thaler describes a useful subroutine which allows work to be offloaded from the Verifier to the Prover. Let <span class="math inline">\(\ell\)</span> be the line going through points <span class="math inline">\(\tilde{W}(a)\)</span>, <span class="math inline">\(\tilde{W}(b)\)</span>, and <span class="math inline">\(\tilde{W}(c)\)</span>. By making the Prover specify a polynomial <span class="math inline">\(\tilde{W}\)</span> constrained to <span class="math inline">\(\ell\)</span>, the verifier can prove the validity of <span class="math inline">\(\tilde{W}(a)\)</span>, <span class="math inline">\(\tilde{W}(b)\)</span>, and <span class="math inline">\(\tilde{W}(c)\)</span> by evaluating <span class="math inline">\(\tilde{W} \circ \ell\)</span> at a single random point <span class="math inline">\(r\)</span>. In our case, <span class="math inline">\(\tilde{a}\)</span> is <span class="math inline">\(\tilde{W}\)</span> so we will continue with <span class="math inline">\(\tilde{W}\)</span> for clarity. <span class="math inline">\(\tilde{W} \circ \ell\)</span> is referred to as <span class="math inline">\(q\)</span> and is sent to the Verifier.</p>
 <div class="cell" data-execution_count="15">
 <div class="cell-output cell-output-display" data-execution_count="15">
 <div class="sourceCode" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> line_subroutine(<span class="va">self</span>, a, b, c):</span>
@@ -551,7 +557,7 @@ Note
 <span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> q</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </div>
-<p>In order to specify the polynomial <span class="math inline">\(q\)</span>, the Prover must send <span class="math inline">\(2 * log(n) + 1\)</span> points to the Verifier. An optimization in this implementation is the fact that we already know that <span class="math inline">\(q(0)\)</span>, <span class="math inline">\(q(1)\)</span>, and <span class="math inline">\(q(2)\)</span> are equal to <span class="math inline">\(\tilde{W}(a)\)</span>, <span class="math inline">\(\tilde{W}(b)\)</span>, and <span class="math inline">\(\tilde{W}(c)\)</span>. The remaining points can calculated by evaluating <span class="math inline">\(\tilde{W}\)</span> at the polynomial <span class="math inline">\(t_i\)</span> where <span class="math inline">\(t_i\)</span> equals the line defined by <span class="math inline">\(t_i(0)=a_i\)</span>, <span class="math inline">\(t_i(1)=b_i\)</span>, and <span class="math inline">\(t_i(2)=c_i\)</span>. We can easily calulate all <span class="math inline">\(t_i\)</span> by zipping together <span class="math inline">\(a\)</span>, <span class="math inline">\(b\)</span>, and <span class="math inline">\(c\)</span> then viewing each entry as polynomial specified by a low degree extension.</p>
+<p>In order to specify the polynomial <span class="math inline">\(q\)</span>, the Prover must send <span class="math inline">\(2 * log(n) + 1\)</span> points to the Verifier. The points can calculated by evaluating <span class="math inline">\(\tilde{W}\)</span> at the polynomial <span class="math inline">\(t_i\)</span> where <span class="math inline">\(t_i\)</span> equals the line defined by <span class="math inline">\(t_i(0)=a_i\)</span>, <span class="math inline">\(t_i(1)=b_i\)</span>, and <span class="math inline">\(t_i(2)=c_i\)</span>. We can easily calulate all <span class="math inline">\(t_i\)</span> by zipping together <span class="math inline">\(a\)</span>, <span class="math inline">\(b\)</span>, and <span class="math inline">\(c\)</span> then viewing each entry as polynomial specified by a low degree extension.</p>
 <div class="cell" data-execution_count="16">
 <div class="cell-output cell-output-display" data-execution_count="16">
 <div class="sourceCode" id="cb16"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>        w <span class="op">=</span> <span class="va">self</span>.transcript.a</span>
@@ -569,7 +575,7 @@ Note
 <span id="cb16-13"><a href="#cb16-13" aria-hidden="true" tabindex="-1"></a></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </div>
-<p>The Verifier needs <span class="math inline">\(\tilde{W}(a)\)</span>, <span class="math inline">\(\tilde{W}(b)\)</span>, and <span class="math inline">\(\tilde{W}(c)\)</span> in order to perform the last verification step of the Counting Triangles IP. By recieving <span class="math inline">\(q\)</span> from the Prover, the Verifier knows that it recieved those values as <span class="math inline">\(q(0)\)</span>, <span class="math inline">\(q(1)\)</span>, and <span class="math inline">\(q(2)\)</span>. To be convinced that the values that she recieved were correct, the verifier picks a random field element <span class="math inline">\(r*\)</span> (<code>ra</code> in the source code), and uses it to create a point <span class="math inline">\(r\)</span> that is on line <span class="math inline">\(\ell\)</span>. The Verifier is convinced of <span class="math inline">\(\tilde{W}(a)\)</span>, <span class="math inline">\(\tilde{W}(b)\)</span>, and <span class="math inline">\(\tilde{W}(c)\)</span> if <span class="math inline">\(q\)</span> is a maximum degree of <span class="math inline">\(2 * log(n)\)</span> and if <span class="math inline">\(q(r*) == \tilde{W}(r)\)</span>.</p>
+<p>The Verifier needs <span class="math inline">\(\tilde{W}(a)\)</span>, <span class="math inline">\(\tilde{W}(b)\)</span>, and <span class="math inline">\(\tilde{W}(c)\)</span> in order to perform the last verification step of the Counting Triangles IP. By recieving <span class="math inline">\(q\)</span> from the Prover, the Verifier knows that it recieved those values as <span class="math inline">\(q(0)\)</span>, <span class="math inline">\(q(1)\)</span>, and <span class="math inline">\(q(2)\)</span>. To be convinced that the values that she recieved were correct, the Verifier picks a random field element <span class="math inline">\(r*\)</span> (<code>ra</code> in the source code), and uses it to create a point <span class="math inline">\(r\)</span> that is on line <span class="math inline">\(\ell\)</span>. The Verifier is convinced of <span class="math inline">\(\tilde{W}(a)\)</span>, <span class="math inline">\(\tilde{W}(b)\)</span>, and <span class="math inline">\(\tilde{W}(c)\)</span> if <span class="math inline">\(q\)</span> is a maximum degree of <span class="math inline">\(2 * log(n)\)</span> and if <span class="math inline">\(q(r*) == \tilde{W}(r)\)</span>.</p>
 </section>
 <section id="the-final-assertion" class="level4">
 <h4 class="anchored" data-anchor-id="the-final-assertion">The Final Assertion</h4>
