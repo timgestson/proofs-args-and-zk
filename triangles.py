@@ -3,7 +3,7 @@ from math import log2
 from felt import Felt
 from lagrange import eval_mle, eval_ule
 from util import hypercube
-from matrix import MatMulProver, MatMulVerifier
+from sumcheck import SumcheckProver, SumcheckVerifier
 
 
 class TriangleProver:
@@ -16,9 +16,9 @@ class TriangleProver:
         self.transcript.write_a(self.a)
 
     def prove(self):
-        p1 = MatMulProver(
-            [eval_mle(self.a2, hc) for hc in hypercube(self.logn)],
-            [eval_mle(self.a, hc) for hc in hypercube(self.logn)],
+        p1 = SumcheckProver(
+            self.a2,
+            self.a,
             self.c,
             self.transcript.hashchain.copy(),
         )
@@ -28,7 +28,7 @@ class TriangleProver:
         rands = p1.transcript.randoms
         (i, j) = (rands[: len(rands) // 2], rands[len(rands) // 2 :])
 
-        p2 = MatMulProver(
+        p2 = SumcheckProver(
             [eval_mle(self.a, i + hc) for hc in hypercube(self.logn // 2)],
             [eval_mle(self.a, hc + j) for hc in hypercube(self.logn // 2)],
             eval_mle(self.a2, i + j),
@@ -47,7 +47,7 @@ class TriangleProver:
         w = self.a
         q = [
             eval_mle(w, [eval_ule(t, Felt(i)) for t in ts])
-            for i in range(2 * self.logn + 1)
+            for i in range(0, 2 * self.logn + 1)
         ]
         return q
 
@@ -57,18 +57,18 @@ class TriangleVerifier:
         self.transcript = transcript
 
     def verify(self):
-        v1 = MatMulVerifier(self.transcript.transcripts[0])
+        v1 = SumcheckVerifier(self.transcript.transcripts[0])
         v1.verify()
 
-        v2 = MatMulVerifier(self.transcript.transcripts[1])
+        v2 = SumcheckVerifier(self.transcript.transcripts[1])
         v2.verify()
 
         rands = self.transcript.transcripts[0].randoms
         (i, j) = (rands[: len(rands) // 2], rands[len(rands) // 2 :])
         k = self.transcript.transcripts[1].randoms
 
-        p1_round_k = self.transcript.transcripts[0].evaluations[-1]
-        p2_round_k = self.transcript.transcripts[1].evaluations[-1]
+        prover1_round_k = self.transcript.transcripts[0].evaluations[-1]
+        prover2_round_k = self.transcript.transcripts[1].evaluations[-1]
         claimed_a2 = self.transcript.transcripts[1].sum
         q = self.transcript.q
         w = self.transcript.a
@@ -85,10 +85,10 @@ class TriangleVerifier:
         assert eval_ule(q, ra) == eval_mle(w, r)
 
         assert wa * claimed_a2 == (
-            eval_ule(p1_round_k, Felt(0)) + eval_ule(p1_round_k, Felt(1))
+            eval_ule(prover1_round_k, Felt(0)) + eval_ule(prover1_round_k, Felt(1))
         )
         assert wb * wc == (
-            eval_ule(p2_round_k, Felt(0)) + eval_ule(p2_round_k, Felt(1))
+            eval_ule(prover2_round_k, Felt(0)) + eval_ule(prover2_round_k, Felt(1))
         )
 
 
